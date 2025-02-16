@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = ["queso-server", "queso-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Will Sheldon <waaronsheldon@gmail.com>"]

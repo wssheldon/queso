@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "queso/Cargo.toml"
+    ],
+    "rust-analyzer.check.command": "check"
+}
