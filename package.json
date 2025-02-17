@@ -1,7 +1,0 @@
-{
-  "dependencies": {},
-  "devDependencies": {
-    "@sentry/cli": "^2.41.1",
-    "@sentry/vite-plugin": "^3.1.2"
-  }
-}
