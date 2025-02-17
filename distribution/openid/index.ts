@@ -46,7 +46,12 @@ const stateBucketPolicy = new aws.iam.Policy("state-bucket-policy", {
     Statement: [
       {
         Effect: "Allow",
-        Action: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+        Action: [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket",
+          "s3:DeleteObject",
+        ],
         Resource: [
           `arn:aws:s3:::${stateBucket}`,
           `arn:aws:s3:::${stateBucket}/*`,
