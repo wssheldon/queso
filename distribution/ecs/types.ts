@@ -113,4 +113,3 @@ export const validateEcrRepositoryName = <T extends string>(
   }
   return name as string as ValidateStringLength<T, 255>;
 };
-
