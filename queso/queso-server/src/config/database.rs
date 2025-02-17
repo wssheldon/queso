@@ -1,5 +1,5 @@
-use diesel::r2d2::{self, ConnectionManager};
 use diesel::PgConnection;
+use diesel::r2d2::{self, ConnectionManager};
 
 pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -9,4 +9,4 @@ pub fn establish_connection_pool() -> DbPool {
     r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool")
-} 
+}
