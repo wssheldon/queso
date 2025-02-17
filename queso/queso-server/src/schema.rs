@@ -7,5 +7,7 @@ diesel::table! {
         email -> Varchar,
         password_hash -> Varchar,
         created_at -> Timestamp,
+        google_id -> Nullable<Varchar>,
+        avatar_url -> Nullable<Varchar>,
     }
 }

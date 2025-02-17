@@ -52,4 +52,12 @@ impl UserRepository {
             .select(User::as_select())
             .first(&mut conn)
     }
+
+    pub fn find_by_google_id(&self, google_id: &str) -> Result<User, diesel::result::Error> {
+        let mut conn = self.pool.get().expect("Failed to get db connection");
+        users::table
+            .filter(users::google_id.eq(google_id))
+            .select(User::as_select())
+            .first(&mut conn)
+    }
 }

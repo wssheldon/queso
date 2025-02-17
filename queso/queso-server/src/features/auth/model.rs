@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use axum::{
-    RequestPartsExt,
+    Json, RequestPartsExt,
     extract::FromRequestParts,
     http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
@@ -10,12 +10,51 @@ use axum_extra::{
     headers::{Authorization, authorization::Bearer},
 };
 use chrono::{Duration, Utc};
-use jsonwebtoken::{DecodingKey, EncodingKey, Validation, errors::Error as JwtError};
+use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode, errors::Error as JwtError};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::env;
-use std::future::Future;
 use thiserror::Error;
+
+use crate::features::users::model::UserError;
+
+#[derive(Debug, Error)]
+pub enum AuthError {
+    #[error("Invalid credentials")]
+    InvalidCredentials(String),
+    #[error("Missing credentials")]
+    MissingCredentials,
+    #[error("Token creation error: {0}")]
+    TokenCreation(#[from] jsonwebtoken::errors::Error),
+    #[error("User error: {0}")]
+    UserError(#[from] UserError),
+    #[error("OAuth error: {0}")]
+    OAuthError(String),
+}
+
+impl IntoResponse for AuthError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            AuthError::InvalidCredentials(msg) => (StatusCode::UNAUTHORIZED, msg),
+            AuthError::MissingCredentials => {
+                (StatusCode::UNAUTHORIZED, "Missing credentials".to_string())
+            }
+            AuthError::TokenCreation(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create token".to_string(),
+            ),
+            AuthError::UserError(e) => (StatusCode::BAD_REQUEST, e.to_string()),
+            AuthError::OAuthError(msg) => (StatusCode::UNAUTHORIZED, msg),
+        };
+
+        let body = Json(json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
+}
 
 pub(crate) static KEYS: Lazy<Keys> = Lazy::new(|| {
     let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
@@ -39,20 +78,24 @@ impl Keys {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: i32,
-    pub exp: i64,
-    pub iat: i64,
-    pub nbf: i64,
+    pub sub: String,
+    pub exp: usize,
+    pub iat: usize,
+    pub nbf: usize,
+    pub user_id: i32,
 }
 
 impl Claims {
     pub fn new(user_id: i32) -> Self {
-        let now = Utc::now();
+        let now = Utc::now().timestamp() as usize;
+        let exp = (Utc::now() + Duration::hours(24)).timestamp() as usize;
+
         Self {
-            sub: user_id,
-            iat: now.timestamp(),
-            nbf: now.timestamp(),
-            exp: (now + Duration::hours(24)).timestamp(),
+            sub: user_id.to_string(),
+            exp,
+            iat: now,
+            nbf: now,
+            user_id,
         }
     }
 }
@@ -60,52 +103,6 @@ impl Claims {
 #[derive(Debug)]
 pub struct AuthUser {
     pub user_id: i32,
-}
-
-#[derive(Debug, Error)]
-pub enum AuthError {
-    #[error("Invalid token")]
-    InvalidToken,
-    #[error("Token expired")]
-    TokenExpired,
-    #[error("Wrong credentials")]
-    WrongCredentials,
-    #[error("Missing authorization header")]
-    MissingCredentials,
-    #[error("Invalid authorization header")]
-    InvalidAuthHeader,
-    #[error("Database error")]
-    DatabaseError(#[from] diesel::result::Error),
-    #[error("JWT error: {0}")]
-    JwtError(#[from] JwtError),
-    #[error("Password hash error: {0}")]
-    PasswordHashError(#[from] argon2::password_hash::Error),
-}
-
-impl IntoResponse for AuthError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AuthError::WrongCredentials | AuthError::InvalidToken | AuthError::TokenExpired => {
-                (StatusCode::UNAUTHORIZED, "Invalid credentials")
-            }
-            AuthError::MissingCredentials | AuthError::InvalidAuthHeader => (
-                StatusCode::BAD_REQUEST,
-                "Missing or invalid authorization header",
-            ),
-            AuthError::DatabaseError(_)
-            | AuthError::JwtError(_)
-            | AuthError::PasswordHashError(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-            }
-        };
-
-        let body = serde_json::json!({
-            "error": error_message,
-            "detail": self.to_string(),
-        });
-
-        (status, axum::Json(body)).into_response()
-    }
 }
 
 #[async_trait]
@@ -130,10 +127,10 @@ where
                 &KEYS.decoding,
                 &Validation::default(),
             )
-            .map_err(AuthError::JwtError)?;
+            .map_err(AuthError::TokenCreation)?;
 
             Ok(AuthUser {
-                user_id: token_data.claims.sub,
+                user_id: token_data.claims.user_id,
             })
         }
     }

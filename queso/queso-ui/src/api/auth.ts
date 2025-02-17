@@ -15,6 +15,7 @@ export const authKeys = {
   login: () => [...authKeys.all, 'login'] as const,
   signup: () => [...authKeys.all, 'signup'] as const,
   logout: () => [...authKeys.all, 'logout'] as const,
+  googleLogin: () => [...authKeys.all, 'google-login'] as const,
 } as const;
 
 // Hooks
@@ -46,5 +47,12 @@ export const useLogout = () => {
   return useMutation<void, AxiosError, void>({
     mutationKey: authKeys.logout(),
     mutationFn: auth.logout,
+  });
+};
+
+export const useGoogleLogin = () => {
+  return useMutation<{ url: string }, AxiosError, void>({
+    mutationKey: authKeys.googleLogin(),
+    mutationFn: auth.googleLogin,
   });
 };

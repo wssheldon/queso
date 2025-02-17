@@ -63,6 +63,11 @@ export const auth = {
     const response = await apiClient.get<User>('/auth/me');
     return response.data;
   },
+
+  googleLogin: async (): Promise<{ url: string }> => {
+    const response = await apiClient.get<{ url: string }>('/auth/google/login');
+    return response.data;
+  },
 };
 
 // Error handling helper

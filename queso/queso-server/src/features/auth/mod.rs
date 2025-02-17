@@ -1,7 +1,8 @@
 mod handler;
-mod model;
-mod router;
-mod service;
+pub mod model;
+pub mod oauth;
+pub mod router;
+pub mod service;
 
 pub use model::{AuthError, AuthUser, Claims, LoginRequest, LoginResponse};
 pub use router::auth_routes;

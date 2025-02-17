@@ -33,4 +33,22 @@ impl UserService {
     pub async fn list_users(&self) -> Result<Vec<User>, UserError> {
         self.repository.list().map_err(UserError::DatabaseError)
     }
+
+    pub async fn find_by_google_id(&self, google_id: &str) -> Result<User, UserError> {
+        self.repository
+            .find_by_google_id(google_id)
+            .map_err(UserError::DatabaseError)
+    }
+
+    pub async fn find_by_username(&self, username: &str) -> Result<User, UserError> {
+        self.repository
+            .find_by_username(username)
+            .map_err(UserError::DatabaseError)
+    }
+
+    pub async fn find_by_id(&self, id: i32) -> Result<User, UserError> {
+        self.repository
+            .find_by_id(id)
+            .map_err(UserError::DatabaseError)
+    }
 }

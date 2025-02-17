@@ -26,20 +26,27 @@ use super::{
 impl IntoResponse for UserError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            UserError::UsernameExists => (StatusCode::CONFLICT, "Username already exists"),
-            UserError::EmailExists => (StatusCode::CONFLICT, "Email already exists"),
+            UserError::UsernameExists => {
+                (StatusCode::CONFLICT, "Username already exists".to_string())
+            }
+            UserError::EmailExists => (StatusCode::CONFLICT, "Email already exists".to_string()),
             UserError::PasswordHashError(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Error processing password",
+                "Error processing password".to_string(),
             ),
-            UserError::DatabaseError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
-            UserError::InternalError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-            }
+            UserError::DatabaseError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            ),
+            UserError::OAuthError(msg) => (StatusCode::UNAUTHORIZED, msg),
+            UserError::InternalError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
         };
 
         let body = Json(ErrorResponse {
-            error: error_message.to_string(),
+            error: error_message,
         });
 
         (status, body).into_response()

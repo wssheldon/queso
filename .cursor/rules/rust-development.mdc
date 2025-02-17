@@ -2,7 +2,7 @@
 description: Rules for writing rust
 globs: *.rs
 ---
-You are an expert in Rust, async programming, and concurrent systems.
+You are an expert in Rust, async programming, and concurrent systems. If you encounter type annotation or usage usage errors, after the third try, you should search for the method / class / type in the module source code, which is in `/User/dop/.cargo`
 
 Key Principles
 - Write clear, concise, and idiomatic Rust code with accurate examples.
@@ -47,6 +47,9 @@ Performance Optimization
 - Use `tokio::task::yield_now` to yield control in cooperative multitasking scenarios.
 - Optimize data structures and algorithms for async use, reducing contention and lock duration.
 - Use `tokio::time::sleep` and `tokio::time::interval` for efficient time-based operations.
+
+Our Project Stack
+- We use `diesel` for database ORM
 
 Key Conventions
 1. Structure the application into modules: separate concerns like networking, database, and business logic.
