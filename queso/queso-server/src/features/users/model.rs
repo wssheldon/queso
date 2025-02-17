@@ -95,10 +95,6 @@ impl User {
     }
 }
 
-fn generate_username_from_email(email: &str) -> String {
-    email.split('@').next().unwrap_or(email).to_string()
-}
-
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GoogleUser {
     pub id: String,

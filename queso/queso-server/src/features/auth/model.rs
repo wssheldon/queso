@@ -145,7 +145,7 @@ pub struct UsernameLoginRequest {
     pub password: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct EmailLoginRequest {
     pub email: String,
     pub password: String,
