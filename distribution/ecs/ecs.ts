@@ -215,7 +215,7 @@ export function createEcsCluster(
     loadBalancers: [
       {
         targetGroupArn: targetGroup.arn,
-        containerName: `${config.prefix}-container`,
+        containerName: config.prefix,
         containerPort: config.containerPort,
       },
     ],
