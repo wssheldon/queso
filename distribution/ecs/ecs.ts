@@ -11,9 +11,33 @@ export interface EcsClusterArgs {
   privateSubnets: aws.ec2.Subnet[];
   ecrRepository: EcrRepository;
   dockerImage: DockerBuilder;
+  databaseUrl: pulumi.Output<string>;
+  databaseSecurityGroup: aws.ec2.SecurityGroup;
 }
 
 export function createEcsCluster(args: EcsClusterArgs) {
+  // Create Secrets Manager secret for sensitive environment variables
+  const appSecrets = new aws.secretsmanager.Secret(
+    `${args.config.prefix}-app-secrets`,
+    {
+      name: `${args.config.prefix}-${args.config.environment}-app-secrets`,
+      description: "Application secrets for the Queso application",
+    }
+  );
+
+  // Store sensitive values in Secrets Manager
+  const secretValues = new aws.secretsmanager.SecretVersion(
+    `${args.config.prefix}-app-secrets-version`,
+    {
+      secretId: appSecrets.id,
+      secretString: pulumi.jsonStringify({
+        JWT_SECRET: args.config.jwtSecret,
+        GOOGLE_CLIENT_ID: args.config.googleClientId,
+        GOOGLE_CLIENT_SECRET: args.config.googleClientSecret,
+      }),
+    }
+  );
+
   // Create ECS Cluster
   const cluster = new aws.ecs.Cluster(`${args.config.prefix}-cluster`, {
     tags: {
@@ -80,6 +104,16 @@ export function createEcsCluster(args: EcsClusterArgs) {
     },
   });
 
+  // Allow ECS tasks to connect to RDS
+  new aws.ec2.SecurityGroupRule(`${args.config.prefix}-ecs-to-rds`, {
+    type: "ingress",
+    fromPort: 5432,
+    toPort: 5432,
+    protocol: "tcp",
+    sourceSecurityGroupId: ecsSg.id,
+    securityGroupId: args.databaseSecurityGroup.id,
+  });
+
   // Create ALB
   const alb = new aws.lb.LoadBalancer(`${args.config.prefix}-alb`, {
     internal: false,
@@ -127,7 +161,7 @@ export function createEcsCluster(args: EcsClusterArgs) {
     ],
   });
 
-  // Create ECS Task Execution Role
+  // Create ECS Task Execution Role with permissions to read secrets
   const taskExecutionRole = new aws.iam.Role(
     `${args.config.prefix}-task-execution-role`,
     {
@@ -146,7 +180,7 @@ export function createEcsCluster(args: EcsClusterArgs) {
     }
   );
 
-  // Attach policy to Task Execution Role
+  // Attach required policies to Task Execution Role
   new aws.iam.RolePolicyAttachment(
     `${args.config.prefix}-task-execution-policy`,
     {
@@ -156,7 +190,22 @@ export function createEcsCluster(args: EcsClusterArgs) {
     }
   );
 
-  // Create ECS Task Definition
+  // Add policy for reading secrets
+  new aws.iam.RolePolicy(`${args.config.prefix}-secrets-policy`, {
+    role: taskExecutionRole.name,
+    policy: pulumi.jsonStringify({
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Action: ["secretsmanager:GetSecretValue", "kms:Decrypt"],
+          Resource: [appSecrets.arn],
+        },
+      ],
+    }),
+  });
+
+  // Create ECS Task Definition with environment variables and secrets
   const taskDefinition = new aws.ecs.TaskDefinition(
     `${args.config.prefix}-task`,
     {
@@ -176,6 +225,54 @@ export function createEcsCluster(args: EcsClusterArgs) {
               containerPort: args.config.containerPort,
               hostPort: args.config.containerPort,
               protocol: "tcp",
+            },
+          ],
+          environment: [
+            {
+              name: "DATABASE_URL",
+              value: args.databaseUrl,
+            },
+            {
+              name: "SERVER_HOST",
+              value: "0.0.0.0",
+            },
+            {
+              name: "API_PORT",
+              value: args.config.containerPort.toString(),
+            },
+            {
+              name: "GOOGLE_REDIRECT_URL",
+              value: pulumi.interpolate`https://${args.config.domainName}/auth/google/callback`,
+            },
+            {
+              name: "GOOGLE_AUTH_URL",
+              value: "https://accounts.google.com/o/oauth2/v2/auth",
+            },
+            {
+              name: "GOOGLE_TOKEN_URL",
+              value: "https://oauth2.googleapis.com/token",
+            },
+            {
+              name: "GOOGLE_USERINFO_URL",
+              value: "https://www.googleapis.com/oauth2/v2/userinfo",
+            },
+            {
+              name: "NODE_ENV",
+              value: args.config.environment,
+            },
+          ],
+          secrets: [
+            {
+              name: "JWT_SECRET",
+              valueFrom: pulumi.interpolate`${appSecrets.arn}:JWT_SECRET::`,
+            },
+            {
+              name: "GOOGLE_CLIENT_ID",
+              valueFrom: pulumi.interpolate`${appSecrets.arn}:GOOGLE_CLIENT_ID::`,
+            },
+            {
+              name: "GOOGLE_CLIENT_SECRET",
+              valueFrom: pulumi.interpolate`${appSecrets.arn}:GOOGLE_CLIENT_SECRET::`,
             },
           ],
           logConfiguration: {
@@ -230,5 +327,6 @@ export function createEcsCluster(args: EcsClusterArgs) {
     alb,
     service,
     taskDefinition,
+    appSecrets,
   };
 }

@@ -1,3 +1,11 @@
 encryptionsalt: v1:94JjU00axcc=:v1:0Tl9ybOawlR3vIfd:M7ZK90jZ+P0JXe61UEFVgBy50lkJgA==
 config:
   aws:region: us-east-1
+  queso:dbPassword:
+    secure: v1:7TPFkiTdvIuSIjik:2IBGOczMYfCPgY8IT1W4agjW5IrmG2NdMS5eNLYDn4lOgiyIM2c9RsdBncTWxTCRkVtRDSYnOz5ShHvv
+  queso:googleClientId:
+    secure: v1:ACpjn/0+xba+6uEo:8j0a278xn6ZJRBnmN03LtnW7koXcHdvL3k3gqwGdrXyby3DRt0gAlZLUGa7NTF7TIXBMNwKZIUsNW0py3mOBdlvm1ho8ZW+XoaX4lxnt3Nsbpq0xcDAXng==
+  queso:googleClientSecret:
+    secure: v1:OcM7vhLLnav+JRGu:9UMx+TpYo7WIGFm1dPmPgjX6nphJGi2gXa662LSCl1Iv2gfFuXE8ZHZfMO2n8LdiPpit
+  queso:jwtSecret:
+    secure: v1:A7CmKp8fCjI4O3G2:dNCpLOMSrERoz8U7aKWAZnFxpecUiWHoewB68u6NivrUZHdSqW9hrCPU3C5GJa9EKIehOo0gOYMxXg==

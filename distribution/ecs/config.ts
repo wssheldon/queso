@@ -9,6 +9,7 @@
 import { Config, Output, output } from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import { validateEcrRepositoryName, EcrRepositoryName } from "./types";
+import * as pulumi from "@pulumi/pulumi";
 
 const config = new Config();
 const caller = aws.getCallerIdentity({});
@@ -42,26 +43,41 @@ export interface AppConfig {
   healthCheckPath: string;
   /** Validated ECR repository name */
   ecrRepositoryName: Output<EcrRepositoryName>;
+  /** Database password */
+  dbPassword: Output<string>;
+  /** JWT secret for authentication */
+  jwtSecret: Output<string>;
+  /** Google OAuth client ID */
+  googleClientId: Output<string>;
+  /** Google OAuth client secret */
+  googleClientSecret: Output<string>;
+  /** Domain name for the application */
+  domainName: string;
 }
 
 export const appConfig: AppConfig = {
   environment: config.get("environment") || "dev",
-  prefix: "queso",
-  region: config.get("aws:region") || "us-east-1",
+  prefix: config.get("prefix") || "queso",
+  region: config.get("region") || "us-east-1",
   vpcCidr: "10.0.0.0/16",
   publicSubnetCidrs: ["10.0.1.0/24", "10.0.2.0/24"],
   privateSubnetCidrs: ["10.0.3.0/24", "10.0.4.0/24"],
-  containerPort: 3000,
-  desiredCount: 2,
-  cpu: 256,
-  memory: 512,
-  healthCheckPath: "/health",
+  containerPort: config.getNumber("containerPort") || 3000,
+  desiredCount: config.getNumber("desiredCount") || 1,
+  cpu: config.getNumber("cpu") || 256,
+  memory: config.getNumber("memory") || 512,
+  healthCheckPath: config.get("healthCheckPath") || "/health",
   ecrRepositoryName: output(caller).apply(
     (current) =>
       validateEcrRepositoryName(
         `${current.accountId}.dkr.ecr.${
-          config.get("aws:region") || "us-east-1"
+          config.get("region") || "us-east-1"
         }.amazonaws.com/queso`
       ) as EcrRepositoryName
   ),
+  dbPassword: config.requireSecret("dbPassword"),
+  jwtSecret: config.requireSecret("jwtSecret"),
+  googleClientId: config.requireSecret("googleClientId"),
+  googleClientSecret: config.requireSecret("googleClientSecret"),
+  domainName: config.require("domainName"),
 };

@@ -72,20 +72,27 @@ RUN apt-get update && \
     ca-certificates \
     tini \
     curl \
-    git && \
+    git \
+    postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
 # Set up application
-WORKDIR /app
+WORKDIR /app/queso
+# Copy the entire repository structure
+COPY .git ./.git
+COPY queso/queso-server/migrations ./queso-server/migrations
 COPY --from=builder /usr/src/app/queso/target/release/${APP_NAME} /usr/local/bin/
-COPY --from=builder /usr/src/app/queso/queso-server/migrations /usr/local/share/queso/migrations
-COPY .git /app/.git
+
+# Set permissions for the queso user
+RUN chown -R queso:queso /app
 
 # Set environment variables
 ENV SERVER_HOST=0.0.0.0 \
     API_PORT=3000 \
     RUST_LOG=info \
-    TZ=UTC
+    TZ=UTC \
+    RUST_BACKTRACE=1 \
+    DATABASE_URL=postgres://postgres:postgres@localhost:5432/queso
 
 # Set up health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
