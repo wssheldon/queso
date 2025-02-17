@@ -6,10 +6,12 @@
  * provides default values for various ECS settings.
  */
 
-import { Config } from "@pulumi/pulumi";
+import { Config, Output, output } from "@pulumi/pulumi";
+import * as aws from "@pulumi/aws";
 import { validateEcrRepositoryName, EcrRepositoryName } from "./types";
 
 const config = new Config();
+const caller = aws.getCallerIdentity({});
 
 /**
  * Configuration interface for the ECS application.
@@ -39,7 +41,7 @@ export interface AppConfig {
   /** Health check path for the application */
   healthCheckPath: string;
   /** Validated ECR repository name */
-  ecrRepositoryName: EcrRepositoryName;
+  ecrRepositoryName: Output<EcrRepositoryName>;
 }
 
 export const appConfig: AppConfig = {
@@ -54,9 +56,12 @@ export const appConfig: AppConfig = {
   cpu: 256,
   memory: 512,
   healthCheckPath: "/health",
-  ecrRepositoryName: validateEcrRepositoryName(
-    `${config.get("aws:accountId")}.dkr.ecr.${
-      config.get("aws:region") || "us-east-1"
-    }.amazonaws.com/queso`
+  ecrRepositoryName: output(caller).apply(
+    (current) =>
+      validateEcrRepositoryName(
+        `${current.accountId}.dkr.ecr.${
+          config.get("aws:region") || "us-east-1"
+        }.amazonaws.com/queso`
+      ) as EcrRepositoryName
   ),
 };
