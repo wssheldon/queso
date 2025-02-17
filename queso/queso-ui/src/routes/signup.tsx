@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSignup, useLogin } from '@/api/auth';
 import { toast } from 'sonner';
 import { isAxiosError } from '@/api/client';
+import { PostHog } from '@/config/posthog';
 
 export const Route = createFileRoute('/signup')({
   component: SignupComponent,
@@ -35,6 +36,7 @@ function SignupComponent() {
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      PostHog.capture('signup_validation_failed', { errors });
       return;
     }
 
@@ -42,16 +44,20 @@ function SignupComponent() {
       { username, email, password },
       {
         onSuccess: () => {
+          PostHog.capture('user_signed_up', { method: 'email' });
           // After successful signup, automatically log the user in with email
           login.mutate(
             { email, password },
             {
               onSuccess: () => {
                 toast.success('Account created successfully. You are now logged in.');
+                PostHog.capture('user_logged_in', { method: 'email', source: 'signup' });
+                PostHog.identify(email); // Identify the user with their email
                 navigate({ to: '/' });
               },
               onError: () => {
                 toast.error('Account created but login failed. Please try logging in.');
+                PostHog.capture('auto_login_failed', { source: 'signup' });
                 navigate({ to: '/login' });
               },
             }
@@ -66,8 +72,12 @@ function SignupComponent() {
             // Set field-specific errors if the message indicates which field
             if (errorMessage.toLowerCase().includes('username')) {
               setFormErrors(prev => ({ ...prev, username: errorMessage }));
+              PostHog.capture('signup_failed', { reason: 'username_error', error: errorMessage });
             } else if (errorMessage.toLowerCase().includes('email')) {
               setFormErrors(prev => ({ ...prev, email: errorMessage }));
+              PostHog.capture('signup_failed', { reason: 'email_error', error: errorMessage });
+            } else {
+              PostHog.capture('signup_failed', { reason: 'unknown', error: errorMessage });
             }
           }
         },

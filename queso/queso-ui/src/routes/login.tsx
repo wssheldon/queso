@@ -4,6 +4,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useLogin, useGoogleLogin } from '@/api/auth';
 import { toast } from 'sonner';
+import { PostHog } from '@/config/posthog';
 
 export const Route = createFileRoute('/login')({
   component: LoginComponent,
@@ -23,6 +24,7 @@ function LoginComponent() {
 
     if (!email) {
       setEmailError('Please enter your email');
+      PostHog.capture('login_validation_failed', { reason: 'empty_email' });
       return;
     }
 
@@ -31,22 +33,26 @@ function LoginComponent() {
       {
         onSuccess: () => {
           toast.success('Logged in successfully');
+          PostHog.capture('user_logged_in', { method: 'email' });
           navigate({ to: '/' });
         },
         onError: () => {
           toast.error('Invalid email or password');
+          PostHog.capture('login_failed', { method: 'email' });
         },
       }
     );
   };
 
   const handleGoogleLogin = () => {
+    PostHog.capture('google_login_initiated');
     googleLogin.mutate(undefined, {
       onSuccess: data => {
         window.location.href = data.url;
       },
       onError: () => {
         toast.error('Failed to initiate Google login');
+        PostHog.capture('google_login_failed');
       },
     });
   };

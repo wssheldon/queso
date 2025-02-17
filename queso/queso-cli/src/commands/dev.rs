@@ -89,10 +89,33 @@ impl ProgressDisplay {
     }
 }
 
-// Add after the static emojis
-const BACKEND_PORT: u16 = 3000;
-const FRONTEND_PORT: u16 = 5173;
-const POSTGRES_PORT: u16 = 5432;
+// Get ports from environment variables or use defaults
+fn get_backend_port() -> u16 {
+    std::env::var("API_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000)
+}
+
+fn get_frontend_port() -> u16 {
+    std::env::var("UI_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(5173)
+}
+
+fn get_postgres_port() -> u16 {
+    std::env::var("DATABASE_URL")
+        .ok()
+        .and_then(|url| {
+            let parts: Vec<String> = url.split(':').map(String::from).collect();
+            parts
+                .get(4)
+                .map(|p| p.split('/').next().unwrap_or("").to_string())
+        })
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(5432)
+}
 
 #[derive(Debug)]
 pub struct ServiceInfo {
@@ -214,18 +237,19 @@ impl<T: CommandExecutor> EnvironmentManager<T> {
     }
 
     pub fn start_backend(&self) -> Result<ServiceInfo> {
+        let port = get_backend_port();
         println!(
             "\n{} {}",
             PACKAGE,
             style("Starting backend server...").cyan()
         );
 
-        if !self.check_port_available(BACKEND_PORT) {
-            if let Some(pid) = self.get_process_on_port(BACKEND_PORT) {
+        if !self.check_port_available(port) {
+            if let Some(pid) = self.get_process_on_port(port) {
                 println!(
                     "{} Port {} is in use by process {}. Kill it? [y/N]",
                     style("!").yellow(),
-                    BACKEND_PORT,
+                    port,
                     pid
                 );
                 let mut input = String::new();
@@ -233,7 +257,7 @@ impl<T: CommandExecutor> EnvironmentManager<T> {
                 if input.trim().to_lowercase() == "y" {
                     self.kill_process(&pid)?;
                 } else {
-                    anyhow::bail!("Port {} is already in use", BACKEND_PORT);
+                    anyhow::bail!("Port {} is already in use", port);
                 }
             }
         }
@@ -246,20 +270,25 @@ impl<T: CommandExecutor> EnvironmentManager<T> {
 
         Ok(ServiceInfo::new(
             "Backend API",
-            &format!("http://localhost:{}", BACKEND_PORT),
-            BACKEND_PORT,
+            &format!("http://localhost:{}", port),
+            port,
         ))
     }
 
     pub fn start_frontend(&self) -> Result<ServiceInfo> {
-        println!("\n{} {}", SPARKLE, style("Setting up frontend...").cyan());
+        let port = get_frontend_port();
+        println!(
+            "\n{} {}",
+            ROCKET,
+            style("Starting frontend server...").cyan()
+        );
 
-        if !self.check_port_available(FRONTEND_PORT) {
-            if let Some(pid) = self.get_process_on_port(FRONTEND_PORT) {
+        if !self.check_port_available(port) {
+            if let Some(pid) = self.get_process_on_port(port) {
                 println!(
                     "{} Port {} is in use by process {}. Kill it? [y/N]",
                     style("!").yellow(),
-                    FRONTEND_PORT,
+                    port,
                     pid
                 );
                 let mut input = String::new();
@@ -267,26 +296,21 @@ impl<T: CommandExecutor> EnvironmentManager<T> {
                 if input.trim().to_lowercase() == "y" {
                     self.kill_process(&pid)?;
                 } else {
-                    anyhow::bail!("Port {} is already in use", FRONTEND_PORT);
+                    anyhow::bail!("Port {} is already in use", port);
                 }
             }
         }
 
-        self.executor.execute(
-            "bun".to_string(),
-            vec!["install".to_string()],
-            Some(self.paths.ui.clone()),
-        )?;
         self.executor.spawn(
-            "bun".to_string(),
+            "npm".to_string(),
             vec!["run".to_string(), "dev".to_string()],
             Some(self.paths.ui.clone()),
         )?;
 
         Ok(ServiceInfo::new(
             "Frontend",
-            &format!("http://localhost:{}", FRONTEND_PORT),
-            FRONTEND_PORT,
+            &format!("http://localhost:{}", port),
+            port,
         ))
     }
 
@@ -397,7 +421,7 @@ impl<T: CommandExecutor> EnvironmentManager<T> {
             progress.message("Stopping frontend server...");
             Command::new("pkill")
                 .arg("-f")
-                .arg("bun run dev")
+                .arg("npm run dev")
                 .status()
                 .context("Failed to stop frontend server")?;
             progress.finish(&format!("{} Frontend server stopped", style("✓").green()));
@@ -493,8 +517,11 @@ impl DevCommand {
         services.push(env_manager.start_frontend()?);
         services.push(ServiceInfo::new(
             "PostgreSQL",
-            &format!("postgresql://postgres:postgres@localhost:{}", POSTGRES_PORT),
-            POSTGRES_PORT,
+            &format!(
+                "postgresql://postgres:postgres@localhost:{}",
+                get_postgres_port()
+            ),
+            get_postgres_port(),
         ));
 
         println!(
@@ -540,7 +567,7 @@ impl DevCommand {
             progress.message("Stopping frontend server...");
             Command::new("pkill")
                 .arg("-f")
-                .arg("bun run dev")
+                .arg("npm run dev")
                 .status()
                 .context("Failed to stop frontend server")?;
             progress.finish(&format!("{} Frontend server stopped", style("✓").green()));

@@ -111,8 +111,10 @@ pub async fn google_callback(
 
     // Get user info from Google
     let client = reqwest::Client::new();
+    let userinfo_url =
+        std::env::var("GOOGLE_USERINFO_URL").expect("GOOGLE_USERINFO_URL must be set");
     let user_data = client
-        .get("https://www.googleapis.com/oauth2/v2/userinfo")
+        .get(userinfo_url)
         .bearer_auth(token.access_token().secret())
         .send()
         .await

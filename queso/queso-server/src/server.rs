@@ -28,8 +28,8 @@ pub async fn run_server() {
     let oauth_config = OAuthConfig::new(
         std::env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID must be set"),
         std::env::var("GOOGLE_CLIENT_SECRET").expect("GOOGLE_CLIENT_SECRET must be set"),
-        "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
-        "https://oauth2.googleapis.com/token".to_string(),
+        std::env::var("GOOGLE_AUTH_URL").expect("GOOGLE_AUTH_URL must be set"),
+        std::env::var("GOOGLE_TOKEN_URL").expect("GOOGLE_TOKEN_URL must be set"),
         std::env::var("GOOGLE_REDIRECT_URL").expect("GOOGLE_REDIRECT_URL must be set"),
     )
     .expect("Failed to create OAuth config");
@@ -54,11 +54,14 @@ pub async fn run_server() {
         )
         .layer(cors);
 
+    // Get server host and port from environment
+    let host = std::env::var("SERVER_HOST").expect("SERVER_HOST must be set");
+    let port = std::env::var("API_PORT").expect("API_PORT must be set");
+    let addr = format!("{}:{}", host, port);
+
     // Run it
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
-    tracing::info!("Server listening on http://127.0.0.1:3000");
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    tracing::info!("Server listening on http://{}", addr);
 
     axum::serve(listener, app).await.unwrap();
 }
