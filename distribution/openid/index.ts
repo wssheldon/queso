@@ -124,17 +124,24 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams",
           "logs:TagResource",
+          "logs:PutRetentionPolicy",
           // Additional ECS permissions
           "ecs:DescribeServices",
           "ecs:UpdateService",
           "ecs:DescribeTaskDefinition",
           "ecs:RegisterTaskDefinition",
+          "ecs:CreateCluster",
+          "ecs:DeleteCluster",
           // IAM permissions
           "iam:CreateRole",
           "iam:DeleteRole",
           "iam:GetRole",
           "iam:PutRolePolicy",
           "iam:DeleteRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
           "iam:PassRole",
           // Load Balancer permissions
           "elasticloadbalancing:Describe*",
@@ -142,6 +149,12 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
           "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
           "elasticloadbalancing:RegisterTargets",
           "elasticloadbalancing:DeregisterTargets",
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:CreateTargetGroup",
+          "elasticloadbalancing:DeleteTargetGroup",
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:DeleteListener",
           // EC2 permissions for VPC and networking
           "ec2:CreateVpc",
           "ec2:DeleteVpc",
@@ -178,6 +191,7 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
           "ec2:DescribeSecurityGroups",
           "ec2:DescribeAddresses",
           "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeVpcAttribute",
         ],
         Resource: "*",
       },
@@ -221,3 +235,12 @@ new aws.iam.RolePolicyAttachment("ecs-deploy-policy-attachment", {
 
 // Export the role ARN for use in GitHub Actions
 export const roleArn = githubActionsRole.arn;
+
+// Fix the EIP domain attribute warning
+const eip = new aws.ec2.Eip(`${prefix}-eip`, {
+  domain: "vpc",
+  tags: {
+    Name: `${prefix}-eip`,
+    Environment: config.get("environment") || "dev",
+  },
+});
