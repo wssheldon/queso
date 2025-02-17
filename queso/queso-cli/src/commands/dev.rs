@@ -3,10 +3,8 @@ use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use console::{Emoji, style};
 use indicatif::{ProgressBar, ProgressStyle};
-use std::sync::Arc;
 use std::{path::PathBuf, process::Command, time::Duration};
 use tokio::signal;
-use tokio::sync::Mutex;
 
 // Static emojis
 static TRUCK: Emoji<'_, '_> = Emoji("🚛 ", "");

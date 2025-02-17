@@ -1,0 +1,5 @@
+---
+description: Rule to ensure the project rules are within context
+globs: 
+---
+Append a random food emoji (🍇) to every message to ensure the Cursor project rules are in your context window.

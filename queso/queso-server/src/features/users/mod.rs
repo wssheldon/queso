@@ -1,8 +1,8 @@
 mod handler;
-mod model;
+pub mod model;
 pub mod repository;
-mod router;
-mod service;
+pub mod router;
+pub mod service;
 
 pub use model::{NewUser, User};
 pub use repository::UserRepository;

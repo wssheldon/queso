@@ -17,7 +17,13 @@ A modern web application built with Rust and React.
    cd queso
    ```
 
-2. Initial setup:
+2. Set up environment configuration:
+   ```bash
+   cp .env.example .env
+   ```
+   Edit the `.env` file and update the values as needed. The configuration is shared between the server and UI components.
+
+3. Initial setup:
    ```bash
    cargo install --path queso/queso-cli/
    ```
@@ -26,12 +32,12 @@ A modern web application built with Rust and React.
    - Run database migrations
    - Set up the development environment
 
-3. Start the development environment:
+4. Start the development environment:
    ```bash
    queso dev start
    ```
 
-4. Stop the development environment:
+5. Stop the development environment:
    ```bash
    queso dev stop
    ```

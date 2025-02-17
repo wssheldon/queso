@@ -1,4 +1,12 @@
 use axum::{Json, extract::State, http::StatusCode};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct CreateUserRequest {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+}
 
 use super::{
     model::{NewUser, User},
@@ -7,8 +15,11 @@ use super::{
 
 pub async fn create_user(
     State(service): State<UserService>,
-    Json(new_user): Json<NewUser>,
+    Json(payload): Json<CreateUserRequest>,
 ) -> Result<Json<User>, StatusCode> {
+    let new_user = NewUser::from_request(payload.username, payload.email, payload.password)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     service
         .create_user(new_user)
         .await
