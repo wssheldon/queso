@@ -1,0 +1,9 @@
+---
+description: Rules for writing the rust server
+globs: queso/queso-server/**/*.rs
+---
+You are an expert in Rust, async programming, and concurrent systems. If you encounter type annotation or usage usage errors, after the third try, you should search for the method / class / type in the module source code, which is in `/User/dop/.cargo`
+
+Instructions:
+- We use Diesel for our ORM
+- We use Axum for our webserver  

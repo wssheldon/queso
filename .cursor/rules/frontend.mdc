@@ -1,6 +1,6 @@
 ---
 description: Rules to ensure consistent frontend development
-globs: *.tsx, *.ts, *.css, *.html, package.json, tsconfig.json, tsconfig.node.json
+globs: queso/queso-ui/**/*
 ---
 You are an expert in Typescript, React, Tanstack Router, Tanstack Query, shadcn, and tailwind
 

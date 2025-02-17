@@ -117,6 +117,19 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
       {
         Effect: "Allow",
         Action: [
+          // ECR permissions
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:GetRepositoryPolicy",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage",
           // CloudWatch Logs permissions
           "logs:CreateLogGroup",
           "logs:CreateLogStream",

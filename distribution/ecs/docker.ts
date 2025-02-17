@@ -1,5 +1,6 @@
 import * as docker from "@pulumi/docker";
 import * as pulumi from "@pulumi/pulumi";
+import * as aws from "@pulumi/aws";
 import { EcrRepository } from "./ecr";
 
 export interface DockerBuilderConfig {
@@ -21,11 +22,23 @@ export class DockerBuilder extends pulumi.ComponentResource {
   ) {
     super("queso:docker:Builder", name, {}, opts);
 
-    const registryInfo = config.ecrRepository.repository.registryId.apply(
-      (registryId) => ({
-        server: `${registryId}.dkr.ecr.us-east-1.amazonaws.com`,
-      })
-    );
+    const registryInfo = pulumi
+      .all([config.ecrRepository.repository.registryId])
+      .apply(async ([registryId]) => {
+        const creds = await aws.ecr.getCredentials({
+          registryId: registryId,
+        });
+        const decoded = Buffer.from(
+          creds.authorizationToken,
+          "base64"
+        ).toString("ascii");
+        const [username, password] = decoded.split(":");
+        return {
+          server: `${registryId}.dkr.ecr.us-east-1.amazonaws.com`,
+          username,
+          password,
+        };
+      });
 
     // Build and push the Docker image
     this.image = new docker.Image(
