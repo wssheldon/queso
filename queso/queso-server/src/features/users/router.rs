@@ -1,12 +1,14 @@
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 
 use super::{handler, service::UserService};
 
 pub fn user_routes() -> Router<UserService> {
     Router::new()
+        .route("/", get(handler::get_users))
         .route("/", post(handler::create_user))
-        .route("/", get(handler::list_users))
+        .route("/{id}", get(handler::get_user))
+        .route("/{id}", delete(handler::delete_user))
 }

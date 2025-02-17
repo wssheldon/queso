@@ -4,12 +4,13 @@ use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
     PkceCodeChallenge, RedirectUrl, Scope, TokenResponse, TokenUrl, basic::BasicClient,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::features::users::{model::GoogleUser, service::UserService};
 
 use super::{
-    model::{AuthError, LoginResponse},
+    model::{AuthError, LoginResponse, OAuthCallback},
     service::AuthService,
 };
 
@@ -19,15 +20,9 @@ pub struct OAuthConfig {
         BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct OAuthUrlResponse {
     pub url: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct OAuthCallback {
-    pub code: String,
-    pub state: String,
 }
 
 impl OAuthConfig {
@@ -60,6 +55,16 @@ pub struct OAuthState {
     pub user_service: UserService,
 }
 
+/// Initiate Google OAuth login
+#[utoipa::path(
+    get,
+    path = "/api/auth/google/login",
+    responses(
+        (status = 200, description = "Successfully generated OAuth URL", body = OAuthUrlResponse),
+        (status = 500, description = "Failed to generate OAuth URL")
+    ),
+    tag = "auth"
+)]
 pub async fn google_login(State(state): State<OAuthState>) -> Result<impl IntoResponse, AuthError> {
     // Generate a PKCE challenge
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
@@ -83,7 +88,18 @@ pub async fn google_login(State(state): State<OAuthState>) -> Result<impl IntoRe
     }))
 }
 
-#[axum::debug_handler]
+/// Handle Google OAuth callback
+#[utoipa::path(
+    post,
+    path = "/api/auth/google/callback",
+    request_body = OAuthCallback,
+    responses(
+        (status = 200, description = "Successfully authenticated with Google", body = LoginResponse),
+        (status = 400, description = "Invalid callback parameters"),
+        (status = 500, description = "Authentication failed")
+    ),
+    tag = "auth"
+)]
 pub async fn google_callback(
     State(state): State<OAuthState>,
     Json(params): Json<OAuthCallback>,

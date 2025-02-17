@@ -60,4 +60,11 @@ impl UserRepository {
             .select(User::as_select())
             .first(&mut conn)
     }
+
+    pub fn delete(&self, id: i32) -> Result<(), diesel::result::Error> {
+        let mut conn = self.pool.get().expect("Failed to get db connection");
+        diesel::delete(users::table.filter(users::id.eq(id)))
+            .execute(&mut conn)
+            .map(|_| ())
+    }
 }

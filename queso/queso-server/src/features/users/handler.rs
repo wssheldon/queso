@@ -1,5 +1,6 @@
 use axum::{
     Json,
+    extract::Path,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -53,16 +54,83 @@ impl IntoResponse for UserError {
     }
 }
 
-pub async fn create_user(
+/// Get a user by ID
+#[utoipa::path(
+    get,
+    path = "/api/users/{id}",
+    responses(
+        (status = 200, description = "User found successfully", body = User),
+        (status = 404, description = "User not found")
+    ),
+    params(
+        ("id" = i32, Path, description = "User ID")
+    ),
+    tag = "users"
+)]
+pub async fn get_user(
     State(service): State<UserService>,
-    Json(payload): Json<CreateUserRequest>,
-) -> Result<Json<User>, UserError> {
-    let new_user = NewUser::from_request(payload.username, payload.email, payload.password)?;
-    let user = service.create_user(new_user).await?;
-    Ok(Json(user))
+    Path(id): Path<i32>,
+) -> Result<Json<User>, StatusCode> {
+    match service.get_user(id).await {
+        Ok(user) => Ok(Json(user)),
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
 }
 
-pub async fn list_users(State(service): State<UserService>) -> Result<Json<Vec<User>>, UserError> {
-    let users = service.list_users().await?;
-    Ok(Json(users))
+/// Get all users
+#[utoipa::path(
+    get,
+    path = "/api/users",
+    responses(
+        (status = 200, description = "List all users", body = Vec<User>)
+    ),
+    tag = "users"
+)]
+pub async fn get_users(State(service): State<UserService>) -> Result<Json<Vec<User>>, StatusCode> {
+    match service.get_users().await {
+        Ok(users) => Ok(Json(users)),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+/// Create a new user
+#[utoipa::path(
+    post,
+    path = "/api/users",
+    request_body = NewUser,
+    responses(
+        (status = 201, description = "User created successfully", body = User),
+        (status = 400, description = "Invalid user data"),
+        (status = 409, description = "User already exists")
+    ),
+    tag = "users"
+)]
+pub async fn create_user(
+    State(service): State<UserService>,
+    Json(new_user): Json<NewUser>,
+) -> Result<(StatusCode, Json<User>), StatusCode> {
+    match service.create_user(new_user).await {
+        Ok(user) => Ok((StatusCode::CREATED, Json(user))),
+        Err(_) => Err(StatusCode::BAD_REQUEST),
+    }
+}
+
+/// Delete a user
+#[utoipa::path(
+    delete,
+    path = "/api/users/{id}",
+    responses(
+        (status = 204, description = "User deleted successfully"),
+        (status = 404, description = "User not found")
+    ),
+    params(
+        ("id" = i32, Path, description = "User ID")
+    ),
+    tag = "users"
+)]
+pub async fn delete_user(State(service): State<UserService>, Path(id): Path<i32>) -> StatusCode {
+    match service.delete_user(id).await {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::NOT_FOUND,
+    }
 }

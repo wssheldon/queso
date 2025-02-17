@@ -72,7 +72,7 @@ impl AuthService {
 
     pub async fn get_user(&self, user_id: i32) -> Result<User, AuthError> {
         self.user_service
-            .find_by_id(user_id)
+            .get_user(user_id)
             .await
             .map_err(AuthError::UserError)
     }

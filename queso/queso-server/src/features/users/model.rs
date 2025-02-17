@@ -6,6 +6,7 @@ use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use utoipa::ToSchema;
 
 #[derive(Error, Debug)]
 pub enum UserError {
@@ -23,42 +24,26 @@ pub enum UserError {
     InternalError,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GoogleUser {
-    pub id: String,
-    pub email: String,
-    pub verified_email: bool,
-    pub name: String,
-    pub given_name: String,
-    pub family_name: String,
-    pub picture: String,
-    pub locale: String,
-}
-
-#[derive(Queryable, Selectable, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Selectable, ToSchema)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
     pub id: i32,
     pub username: String,
     pub email: String,
-    #[serde(skip_serializing)]
+    #[schema(write_only)]
     pub password_hash: String,
-    pub created_at: NaiveDateTime,
     pub google_id: Option<String>,
     pub avatar_url: Option<String>,
+    pub created_at: NaiveDateTime,
 }
 
-#[derive(Insertable, Deserialize, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Insertable, ToSchema)]
 #[diesel(table_name = crate::schema::users)]
 pub struct NewUser {
     pub username: String,
     pub email: String,
-    #[serde(skip_deserializing, skip_serializing)]
     pub password_hash: String,
-    #[serde(default)]
-    #[diesel(skip_insertion)]
-    pub password: String,
     pub google_id: Option<String>,
     pub avatar_url: Option<String>,
 }
@@ -80,19 +65,16 @@ impl NewUser {
             username,
             email,
             password_hash,
-            password,
             google_id: None,
             avatar_url: None,
         })
     }
 
     pub fn from_google_user(google_user: GoogleUser) -> Self {
-        let username = generate_username_from_email(&google_user.email);
         Self {
-            username,
+            username: google_user.name,
             email: google_user.email,
-            password_hash: String::new(), // OAuth users don't need a password
-            password: String::new(),
+            password_hash: String::new(), // No password for Google users
             google_id: Some(google_user.id),
             avatar_url: Some(google_user.picture),
         }
@@ -115,4 +97,16 @@ impl User {
 
 fn generate_username_from_email(email: &str) -> String {
     email.split('@').next().unwrap_or(email).to_string()
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct GoogleUser {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub verified_email: bool,
+    pub given_name: String,
+    pub family_name: String,
+    pub picture: String,
+    pub locale: String,
 }

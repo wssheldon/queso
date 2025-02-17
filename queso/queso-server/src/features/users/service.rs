@@ -30,14 +30,22 @@ impl UserService {
             .map_err(UserError::DatabaseError)
     }
 
-    pub async fn list_users(&self) -> Result<Vec<User>, UserError> {
+    pub async fn get_user(&self, id: i32) -> Result<User, UserError> {
+        self.repository
+            .find_by_id(id)
+            .map_err(UserError::DatabaseError)
+    }
+
+    pub async fn get_users(&self) -> Result<Vec<User>, UserError> {
         self.repository.list().map_err(UserError::DatabaseError)
     }
 
-    pub async fn find_by_google_id(&self, google_id: &str) -> Result<User, UserError> {
+    pub async fn delete_user(&self, id: i32) -> Result<(), UserError> {
         self.repository
-            .find_by_google_id(google_id)
-            .map_err(UserError::DatabaseError)
+            .find_by_id(id)
+            .map_err(UserError::DatabaseError)?;
+
+        self.repository.delete(id).map_err(UserError::DatabaseError)
     }
 
     pub async fn find_by_username(&self, username: &str) -> Result<User, UserError> {
@@ -52,9 +60,9 @@ impl UserService {
             .map_err(UserError::DatabaseError)
     }
 
-    pub async fn find_by_id(&self, id: i32) -> Result<User, UserError> {
+    pub async fn find_by_google_id(&self, google_id: &str) -> Result<User, UserError> {
         self.repository
-            .find_by_id(id)
+            .find_by_google_id(google_id)
             .map_err(UserError::DatabaseError)
     }
 }

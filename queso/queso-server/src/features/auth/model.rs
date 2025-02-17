@@ -17,6 +17,7 @@ use serde_json::json;
 use std::env;
 use std::future::Future;
 use thiserror::Error;
+use utoipa::ToSchema;
 
 use crate::features::users::model::UserError;
 
@@ -150,17 +151,19 @@ pub struct EmailLoginRequest {
     pub password: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LoginResponse {
     pub token: String,
-    pub token_type: String,
 }
 
 impl LoginResponse {
     pub fn new(token: String) -> Self {
-        Self {
-            token,
-            token_type: "Bearer".to_string(),
-        }
+        Self { token }
     }
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct OAuthCallback {
+    pub code: String,
+    pub state: String,
 }

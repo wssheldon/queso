@@ -1,5 +1,7 @@
 use axum::{Router, routing::get};
 use tower_http::cors::{Any, CorsLayer};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
     config::database::establish_connection_pool,
@@ -12,6 +14,46 @@ use crate::{
         users::{repository::UserRepository, router::user_routes, service::UserService},
     },
 };
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        crate::features::users::handler::get_user,
+        crate::features::users::handler::get_users,
+        crate::features::users::handler::create_user,
+        crate::features::users::handler::delete_user,
+        crate::features::auth::oauth::google_login,
+        crate::features::auth::oauth::google_callback,
+    ),
+    components(
+        schemas(
+            crate::features::users::model::User,
+            crate::features::users::model::NewUser,
+            crate::features::users::model::GoogleUser,
+            crate::features::auth::model::LoginResponse,
+            crate::features::auth::model::OAuthCallback,
+        )
+    ),
+    tags(
+        (name = "users", description = "User management endpoints"),
+        (name = "auth", description = "Authentication endpoints")
+    ),
+    info(
+        title = "Queso API",
+        version = env!("CARGO_PKG_VERSION"),
+        description = "REST API for Queso application",
+        license(
+            name = "MIT",
+            url = "https://github.com/yourusername/queso/blob/main/LICENSE"
+        ),
+        contact(
+            name = "Queso Team",
+            email = "team@queso.com",
+            url = "https://queso.com"
+        )
+    )
+)]
+struct ApiDoc;
 
 pub async fn run_server() {
     // Create database pool
@@ -52,6 +94,7 @@ pub async fn run_server() {
                 user_service,
             }),
         )
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(cors);
 
     // Get server host and port from environment
@@ -62,6 +105,7 @@ pub async fn run_server() {
     // Run it
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     tracing::info!("Server listening on http://{}", addr);
+    tracing::info!("API documentation available at http://{}/swagger-ui", addr);
 
     axum::serve(listener, app).await.unwrap();
 }
