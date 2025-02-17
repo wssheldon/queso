@@ -71,13 +71,15 @@ RUN apt-get update && \
     libpq5 \
     ca-certificates \
     tini \
-    curl && \
+    curl \
+    git && \
     rm -rf /var/lib/apt/lists/*
 
 # Set up application
 WORKDIR /app
 COPY --from=builder /usr/src/app/queso/target/release/${APP_NAME} /usr/local/bin/
 COPY --from=builder /usr/src/app/queso/queso-server/migrations /usr/local/share/queso/migrations
+COPY .git /app/.git
 
 # Set environment variables
 ENV SERVER_HOST=0.0.0.0 \
