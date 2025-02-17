@@ -14,8 +14,8 @@ const ecrRepo = new EcrRepository("queso", {
 
 // Build and push Docker image
 const dockerImage = new DockerBuilder("queso", {
-  context: "../..", // Root of the project where Dockerfile is
-  dockerfile: "Dockerfile",
+  context: process.cwd() + "/../../", // Absolute path to project root
+  dockerfile: process.cwd() + "/../../Dockerfile", // Absolute path to Dockerfile
   ecrRepository: ecrRepo,
   imageName: "queso",
   tags: [appConfig.environment],

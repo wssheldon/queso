@@ -51,6 +51,12 @@ jobs:
           cd distribution/ecs
           npm install
 
+      - name: Debug directory structure
+        run: |
+          pwd
+          ls -la
+          ls -la ../../
+
       - name: Clear Pulumi locks
         run: |
           cd distribution/ecs
