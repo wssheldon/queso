@@ -1,5 +1,5 @@
 use super::{
-    model::{NewUser, User},
+    model::{NewUser, User, UserError},
     repository::UserRepository,
 };
 
@@ -13,11 +13,24 @@ impl UserService {
         Self { repository }
     }
 
-    pub async fn create_user(&self, new_user: NewUser) -> Result<User, String> {
-        self.repository.create(&new_user).map_err(|e| e.to_string())
+    pub async fn create_user(&self, new_user: NewUser) -> Result<User, UserError> {
+        // Check if username exists
+        if let Ok(_) = self.repository.find_by_username(&new_user.username) {
+            return Err(UserError::UsernameExists);
+        }
+
+        // Check if email exists
+        if let Ok(_) = self.repository.find_by_email(&new_user.email) {
+            return Err(UserError::EmailExists);
+        }
+
+        // Create user
+        self.repository
+            .create(&new_user)
+            .map_err(UserError::DatabaseError)
     }
 
-    pub async fn list_users(&self) -> Result<Vec<User>, String> {
-        self.repository.list().map_err(|e| e.to_string())
+    pub async fn list_users(&self) -> Result<Vec<User>, UserError> {
+        self.repository.list().map_err(UserError::DatabaseError)
     }
 }

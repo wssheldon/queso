@@ -5,6 +5,21 @@ use argon2::{
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum UserError {
+    #[error("Username already exists")]
+    UsernameExists,
+    #[error("Email already exists")]
+    EmailExists,
+    #[error("Password hashing error: {0}")]
+    PasswordHashError(#[from] argon2::password_hash::Error),
+    #[error("Database error: {0}")]
+    DatabaseError(#[from] diesel::result::Error),
+    #[error("Internal server error")]
+    InternalError,
+}
 
 #[derive(Queryable, Selectable, Serialize)]
 #[diesel(table_name = crate::schema::users)]

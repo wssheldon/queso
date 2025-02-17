@@ -10,7 +10,7 @@ use axum_extra::{
     headers::{Authorization, authorization::Bearer},
 };
 use chrono::{Duration, Utc};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, errors::Error as JwtError};
+use jsonwebtoken::{DecodingKey, EncodingKey, Validation, errors::Error as JwtError};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::env;
