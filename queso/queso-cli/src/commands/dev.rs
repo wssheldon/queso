@@ -98,6 +98,7 @@ const POSTGRES_PORT: u16 = 5432;
 pub struct ServiceInfo {
     name: String,
     url: String,
+    #[allow(dead_code)]
     port: u16,
 }
 

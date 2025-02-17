@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use git2::Repository;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub fn find_git_root() -> Result<PathBuf> {
     let current_dir = std::env::current_dir().context("Failed to get current directory")?;
@@ -12,7 +12,7 @@ pub fn find_git_root() -> Result<PathBuf> {
     Ok(repo_path.to_path_buf())
 }
 
-pub fn get_project_paths(git_root: &PathBuf) -> ProjectPaths {
+pub fn get_project_paths(git_root: &Path) -> ProjectPaths {
     let queso_dir = git_root.join("queso");
     ProjectPaths {
         server: queso_dir.join("queso-server"),

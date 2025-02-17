@@ -3,9 +3,7 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordVerifier},
 };
-use jsonwebtoken::{EncodingKey, Header, encode};
-use once_cell::sync::Lazy;
-use std::env;
+use jsonwebtoken::{Header, encode};
 
 use super::model::{
     AuthError, Claims, EmailLoginRequest, KEYS, LoginResponse, UsernameLoginRequest,
@@ -54,9 +52,9 @@ impl AuthService {
     ) -> Result<LoginResponse, AuthError> {
         let parsed_hash = PasswordHash::new(&user.password_hash)?;
 
-        if !Argon2::default()
+        if Argon2::default()
             .verify_password(password.as_bytes(), &parsed_hash)
-            .is_ok()
+            .is_err()
         {
             return Err(AuthError::InvalidCredentials(
                 "Invalid password".to_string(),

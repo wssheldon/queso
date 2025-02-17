@@ -10,11 +10,12 @@ use axum_extra::{
     headers::{Authorization, authorization::Bearer},
 };
 use chrono::{Duration, Utc};
-use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode, errors::Error as JwtError};
+use jsonwebtoken::{DecodingKey, EncodingKey, Validation};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::env;
+use std::future::Future;
 use thiserror::Error;
 
 use crate::features::users::model::UserError;
@@ -112,6 +113,7 @@ where
 {
     type Rejection = AuthError;
 
+    #[allow(clippy::manual_async_fn)]
     fn from_request_parts(
         parts: &mut Parts,
         _state: &S,

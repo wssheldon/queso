@@ -1,15 +1,10 @@
-use axum::{
-    Json,
-    extract::{FromRequest, Query, State},
-    response::{IntoResponse, Response},
-};
+use axum::{Json, extract::State, response::IntoResponse};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
     PkceCodeChallenge, RedirectUrl, Scope, TokenResponse, TokenUrl, basic::BasicClient,
 };
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::features::users::{model::GoogleUser, service::UserService};
 
