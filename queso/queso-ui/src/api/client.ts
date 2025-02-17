@@ -24,6 +24,11 @@ export interface User {
   email: string;
 }
 
+export interface GoogleCodeExchangeRequest {
+  code: string;
+  state: string;
+}
+
 // Create an axios instance with the base URL from environment
 export const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -66,6 +71,12 @@ export const auth = {
 
   googleLogin: async (): Promise<{ url: string }> => {
     const response = await apiClient.get<{ url: string }>('/auth/google/login');
+    return response.data;
+  },
+
+  exchangeGoogleCode: async (data: GoogleCodeExchangeRequest): Promise<AuthResponse> => {
+    const response = await apiClient.post<AuthResponse>('/auth/google/callback', data);
+    localStorage.setItem('auth_token', response.data.token);
     return response.data;
   },
 };

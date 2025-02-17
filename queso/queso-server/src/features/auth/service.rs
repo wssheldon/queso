@@ -1,4 +1,4 @@
-use chrono::{Duration, Utc};
+use chrono;
 use jsonwebtoken::{EncodingKey, Header, encode};
 use once_cell::sync::Lazy;
 use std::env;
@@ -64,6 +64,6 @@ impl AuthService {
         self.user_service
             .find_by_id(user_id)
             .await
-            .map_err(|e| AuthError::UserError(e))
+            .map_err(AuthError::UserError)
     }
 }

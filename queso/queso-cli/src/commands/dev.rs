@@ -48,7 +48,7 @@ impl CommandExecutor for RealCommandExecutor {
             cmd.current_dir(cwd);
         }
         cmd.status()
-            .with_context(|| format!("Failed to execute command"))?;
+            .with_context(|| "Failed to execute command".to_string())?;
         Ok(())
     }
 
@@ -59,7 +59,7 @@ impl CommandExecutor for RealCommandExecutor {
             cmd.current_dir(cwd);
         }
         cmd.spawn()
-            .with_context(|| format!("Failed to spawn command"))?;
+            .with_context(|| "Failed to spawn command".to_string())?;
         Ok(())
     }
 }
@@ -461,7 +461,7 @@ enum DevSubcommand {
 
 impl DevCommand {
     pub async fn run(&self, paths: ProjectPaths) -> Result<()> {
-        let executor = RealCommandExecutor::default();
+        let executor = RealCommandExecutor;
         let config = EnvConfig::default();
         let env_manager = EnvironmentManager::new(paths, executor, config);
 

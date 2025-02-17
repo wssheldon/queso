@@ -5,6 +5,7 @@ import {
   type SignupRequest,
   type User,
   type AuthResponse,
+  type GoogleCodeExchangeRequest,
 } from './client';
 import { AxiosError } from 'axios';
 
@@ -16,6 +17,7 @@ export const authKeys = {
   signup: () => [...authKeys.all, 'signup'] as const,
   logout: () => [...authKeys.all, 'logout'] as const,
   googleLogin: () => [...authKeys.all, 'google-login'] as const,
+  exchangeGoogleCode: () => [...authKeys.all, 'exchange-google-code'] as const,
 } as const;
 
 // Hooks
@@ -54,5 +56,13 @@ export const useGoogleLogin = () => {
   return useMutation<{ url: string }, AxiosError, void>({
     mutationKey: authKeys.googleLogin(),
     mutationFn: auth.googleLogin,
+  });
+};
+
+export const useExchangeGoogleCode = () => {
+  return useMutation<AuthResponse, AxiosError, GoogleCodeExchangeRequest>({
+    mutationKey: authKeys.exchangeGoogleCode(),
+    mutationFn: auth.exchangeGoogleCode,
+    retry: false,
   });
 };

@@ -15,12 +15,12 @@ impl UserService {
 
     pub async fn create_user(&self, new_user: NewUser) -> Result<User, UserError> {
         // Check if username exists
-        if let Ok(_) = self.repository.find_by_username(&new_user.username) {
+        if self.repository.find_by_username(&new_user.username).is_ok() {
             return Err(UserError::UsernameExists);
         }
 
         // Check if email exists
-        if let Ok(_) = self.repository.find_by_email(&new_user.email) {
+        if self.repository.find_by_email(&new_user.email).is_ok() {
             return Err(UserError::EmailExists);
         }
 

@@ -1,25 +1,27 @@
 use axum::{
     Json,
-    extract::{Query, State},
-    response::{IntoResponse, Redirect},
+    extract::{FromRequest, Query, State},
+    response::{IntoResponse, Response},
 };
+use base64::{Engine as _, engine::general_purpose::URL_SAFE};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EndpointNotSet, EndpointSet,
-    PkceCodeChallenge, RedirectUrl, Scope, TokenResponse, TokenUrl,
-    basic::{BasicClient, BasicErrorResponse, BasicTokenResponse, BasicTokenType},
+    PkceCodeChallenge, RedirectUrl, Scope, TokenResponse, TokenUrl, basic::BasicClient,
 };
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::features::users::{model::GoogleUser, service::UserService};
 
-use super::{model::AuthError, service::AuthService};
+use super::{
+    model::{AuthError, LoginResponse},
+    service::AuthService,
+};
 
 #[derive(Clone)]
 pub struct OAuthConfig {
     pub client:
         BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
-    pub pkce_verifier: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -51,10 +53,7 @@ impl OAuthConfig {
                 TokenUrl::new(token_url).map_err(|e| AuthError::OAuthError(e.to_string()))?,
             );
 
-        Ok(Self {
-            client,
-            pkce_verifier: None,
-        })
+        Ok(Self { client })
     }
 }
 
@@ -66,19 +65,17 @@ pub struct OAuthState {
     pub user_service: UserService,
 }
 
-pub async fn google_login(
-    State(mut state): State<OAuthState>,
-) -> Result<impl IntoResponse, AuthError> {
+pub async fn google_login(State(state): State<OAuthState>) -> Result<impl IntoResponse, AuthError> {
     // Generate a PKCE challenge
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
-    // Store the verifier for later use
-    state.oauth_config.pkce_verifier = Some(pkce_verifier.secret().to_string());
+    // Encode the verifier in the state parameter
+    let state_data = URL_SAFE.encode(pkce_verifier.secret());
 
     let (auth_url, _csrf_token) = state
         .oauth_config
         .client
-        .authorize_url(CsrfToken::new_random)
+        .authorize_url(|| CsrfToken::new(state_data))
         // Set the desired scopes
         .add_scope(Scope::new("profile".to_string()))
         .add_scope(Scope::new("email".to_string()))
@@ -91,19 +88,28 @@ pub async fn google_login(
     }))
 }
 
+#[axum::debug_handler]
 pub async fn google_callback(
-    Query(params): Query<OAuthCallback>,
     State(state): State<OAuthState>,
-) -> Result<impl IntoResponse, AuthError> {
+    Json(params): Json<OAuthCallback>,
+) -> Result<Json<LoginResponse>, AuthError> {
     let http_client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| AuthError::OAuthError(e.to_string()))?;
 
+    // Decode the PKCE verifier from the state parameter
+    let pkce_verifier = URL_SAFE
+        .decode(params.state)
+        .map_err(|e| AuthError::OAuthError(format!("Failed to decode state: {}", e)))?;
+    let pkce_verifier = String::from_utf8(pkce_verifier)
+        .map_err(|e| AuthError::OAuthError(format!("Invalid state encoding: {}", e)))?;
+
     let token = state
         .oauth_config
         .client
         .exchange_code(AuthorizationCode::new(params.code))
+        .set_pkce_verifier(oauth2::PkceCodeVerifier::new(pkce_verifier))
         .request_async(&http_client)
         .await
         .map_err(|e| AuthError::OAuthError(e.to_string()))?;
@@ -133,10 +139,5 @@ pub async fn google_callback(
     // Generate JWT token
     let token = state.auth_service.generate_token(user.id)?;
 
-    // Redirect to frontend with token
-    let mut frontend_url = Url::parse("http://localhost:5173").unwrap();
-    frontend_url.set_path("/oauth/callback");
-    frontend_url.query_pairs_mut().append_pair("token", &token);
-
-    Ok(Redirect::to(frontend_url.as_str()))
+    Ok(Json(LoginResponse::new(token)))
 }
