@@ -1,0 +1,4 @@
+encryptionsalt: v1:cY2kZiTvHiU=:v1:X5TqPdveiMlA9s8P:oRJqczlxJpl/z/mpoJ4dM8f4Lku4UA==
+config:
+  aws:region: us-east-1
+  queso-openid:githubRepo: wssheldon/queso
