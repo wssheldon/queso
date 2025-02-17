@@ -51,6 +51,17 @@ jobs:
           cd distribution/ecs
           npm install
 
+      - name: Clear Pulumi locks
+        run: |
+          cd distribution/ecs
+          pulumi login s3://queso-state
+          # Try to cancel any existing operations
+          pulumi cancel --yes || true
+          # Force remove lock files if cancel didn't work
+          aws s3 rm s3://queso-state/.pulumi/locks/organization/queso/prod/ --recursive || true
+          # Wait a moment for S3 consistency
+          sleep 5
+
       - name: Deploy infrastructure
         run: |
           cd distribution/ecs
