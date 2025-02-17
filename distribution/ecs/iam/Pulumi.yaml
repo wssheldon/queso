@@ -1,3 +1,0 @@
-name: queso-iam
-runtime: nodejs
-description: IAM and OIDC configuration for GitHub Actions
