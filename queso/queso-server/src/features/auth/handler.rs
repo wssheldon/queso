@@ -1,19 +1,16 @@
 use axum::{Json, extract::State};
 
 use super::{
-    model::{AuthError, AuthUser, LoginRequest, LoginResponse},
+    model::{AuthError, AuthUser, EmailLoginRequest, LoginResponse},
     oauth::OAuthState,
 };
 
 pub async fn login(
     State(state): State<OAuthState>,
-    Json(payload): Json<LoginRequest>,
+    Json(payload): Json<EmailLoginRequest>,
 ) -> Result<Json<LoginResponse>, AuthError> {
-    let token = state
-        .auth_service
-        .login(payload.username, payload.password)
-        .await?;
-    Ok(Json(LoginResponse::new(token)))
+    let response = state.auth_service.login_with_email(payload).await?;
+    Ok(Json(response))
 }
 
 pub async fn me(
@@ -28,8 +25,11 @@ pub async fn me(
     })))
 }
 
-pub async fn logout(_auth_user: AuthUser) -> Result<(), AuthError> {
-    // In a real application, you might want to invalidate the token
-    // by adding it to a blacklist or implementing token revocation
+pub async fn logout(State(state): State<OAuthState>, auth_user: AuthUser) -> Result<(), AuthError> {
+    // Invalidate the user's session/token
+    state
+        .auth_service
+        .invalidate_session(auth_user.user_id)
+        .await?;
     Ok(())
 }

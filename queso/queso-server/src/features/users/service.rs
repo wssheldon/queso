@@ -46,6 +46,12 @@ impl UserService {
             .map_err(UserError::DatabaseError)
     }
 
+    pub async fn find_by_email(&self, email: &str) -> Result<User, UserError> {
+        self.repository
+            .find_by_email(email)
+            .map_err(UserError::DatabaseError)
+    }
+
     pub async fn find_by_id(&self, id: i32) -> Result<User, UserError> {
         self.repository
             .find_by_id(id)

@@ -12,7 +12,7 @@ use crate::features::auth::{
 
 pub fn auth_routes() -> Router<OAuthState> {
     Router::new()
-        .route("/login", post(handler::login))
+        .route("/login/email", post(handler::login))
         .route("/google/login", get(oauth::google_login))
         .route("/google/callback", post(oauth::google_callback))
         .route(

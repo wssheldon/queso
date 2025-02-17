@@ -137,8 +137,14 @@ where
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct LoginRequest {
+pub struct UsernameLoginRequest {
     pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EmailLoginRequest {
+    pub email: String,
     pub password: String,
 }
 

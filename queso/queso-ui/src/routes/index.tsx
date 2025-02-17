@@ -1,9 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Github, Star, Zap, User } from 'lucide-react';
+import { ArrowRight, Github, Star, Zap, User, LogOut } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useNavigate } from '@tanstack/react-router';
+import { useAuth } from '@/hooks/use-auth';
 
 export const Route = createFileRoute('/')({
   component: HomeRoute,
@@ -11,6 +19,13 @@ export const Route = createFileRoute('/')({
 
 function HomeRoute() {
   const { user } = useCurrentUser();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate({ to: '/login' });
+  };
 
   return (
     <div className="flex min-h-full flex-col">
@@ -21,10 +36,20 @@ function HomeRoute() {
         </div>
         {/* User Badge */}
         {user && (
-          <div className="fixed bottom-4 left-4 flex items-center gap-2 rounded-full bg-[--primary] px-3 py-1 text-sm text-[--primary-foreground] shadow-md">
-            <User className="h-4 w-4" />
-            <span>{user.username}</span>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="fixed bottom-4 left-4 flex items-center gap-2 rounded-full bg-[--primary] px-3 py-1 text-sm text-[--primary-foreground] shadow-md transition-colors hover:bg-[--primary]/90">
+                <User className="h-4 w-4" />
+                <span>{user.username}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <div className="max-w-[800px] space-y-8 text-center">
           <h1 className="text-6xl font-bold tracking-tighter">Welcome to Queso</h1>

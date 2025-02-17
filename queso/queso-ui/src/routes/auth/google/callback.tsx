@@ -6,7 +6,7 @@ import { useExchangeGoogleCode } from '@/api/auth';
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/api/auth/google/callback',
+  path: '/auth/google/callback',
   component: OAuthCallbackComponent,
 });
 

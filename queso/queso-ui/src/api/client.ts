@@ -3,7 +3,7 @@ import { env } from '../config/env';
 
 // Types
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -49,7 +49,7 @@ apiClient.interceptors.request.use(config => {
 // Auth API functions
 export const auth = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/auth/login', data);
+    const response = await apiClient.post<AuthResponse>('/auth/login/email', data);
     localStorage.setItem('auth_token', response.data.token);
     return response.data;
   },
