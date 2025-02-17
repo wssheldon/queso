@@ -124,6 +124,8 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams",
           "logs:TagResource",
+          "logs:UntagResource",
+          "logs:ListTagsForResource",
           "logs:PutRetentionPolicy",
           // Additional ECS permissions
           "ecs:DescribeServices",

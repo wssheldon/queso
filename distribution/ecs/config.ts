@@ -14,6 +14,7 @@ export interface AppConfig {
   cpu: number;
   memory: number;
   healthCheckPath: string;
+  ecrRepository: string;
 }
 
 export const appConfig: AppConfig = {
@@ -28,4 +29,7 @@ export const appConfig: AppConfig = {
   cpu: 256,
   memory: 512,
   healthCheckPath: "/health",
+  ecrRepository: `${config.get("aws:accountId")}.dkr.ecr.${
+    config.get("aws:region") || "us-east-1"
+  }.amazonaws.com/queso`,
 };
