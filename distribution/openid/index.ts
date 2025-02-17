@@ -1,3 +1,17 @@
+/**
+ * AWS OpenID Connect (OIDC) Configuration for GitHub Actions
+ *
+ * This module sets up OIDC authentication between GitHub Actions and AWS, eliminating
+ * the need for long-lived AWS credentials stored as GitHub secrets.
+ *
+ * Key components:
+ * 1. OIDC Provider - Establishes trust between GitHub and AWS
+ * 2. IAM Role - Assumes the identity with specific permissions
+ * 3. Trust Policy - Controls which GitHub workflows can assume the role
+ *
+ * @see https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services
+ */
+
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 
@@ -6,14 +20,26 @@ const prefix = config.get("prefix") || "queso";
 const repoName = config.get("githubRepo") || "*"; // e.g., "your-org/your-repo"
 const stateBucket = "queso-state"; // Your Pulumi state bucket
 
-// Create OIDC Provider for GitHub Actions
+/**
+ * Creates an OIDC Provider for GitHub Actions in AWS IAM.
+ * This establishes the trust relationship between GitHub and AWS.
+ *
+ * The thumbprint list is GitHub's OIDC token signing certificate thumbprint.
+ * @see https://token.actions.githubusercontent.com/.well-known/openid-configuration
+ */
 const githubOidc = new aws.iam.OpenIdConnectProvider("github-actions", {
   url: "https://token.actions.githubusercontent.com",
   clientIdLists: ["sts.amazonaws.com"],
   thumbprintLists: ["6938fd4d98bab03faadb97b34396831e3780aea1"],
 });
 
-// Create IAM Role for GitHub Actions
+/**
+ * Creates an IAM Role that can be assumed by GitHub Actions.
+ * The trust policy includes conditions that limit which GitHub workflows
+ * can assume this role, following AWS security best practices.
+ *
+ * @see https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html
+ */
 const githubActionsRole = new aws.iam.Role("github-actions-role", {
   name: `${prefix}-github-actions-role`,
   assumeRolePolicy: {
@@ -38,7 +64,17 @@ const githubActionsRole = new aws.iam.Role("github-actions-role", {
   },
 });
 
-// Create custom policy for S3 state bucket access
+/**
+ * Creates an IAM Policy for Pulumi state management in S3.
+ * Grants necessary permissions to read, write, and list objects
+ * in the Pulumi state bucket.
+ *
+ * Required permissions:
+ * - s3:GetObject - Read state files
+ * - s3:PutObject - Write state files
+ * - s3:ListBucket - List state files
+ * - s3:DeleteObject - Clean up old state files
+ */
 const stateBucketPolicy = new aws.iam.Policy("state-bucket-policy", {
   name: `${prefix}-state-bucket-policy`,
   policy: {
@@ -61,7 +97,17 @@ const stateBucketPolicy = new aws.iam.Policy("state-bucket-policy", {
   },
 });
 
-// Create custom policy for additional ECS permissions
+/**
+ * Creates an IAM Policy for ECS deployment operations.
+ * Grants permissions needed for managing ECS services, tasks,
+ * CloudWatch logs, and Load Balancer configurations.
+ *
+ * Key permission groups:
+ * - CloudWatch Logs - For container logging
+ * - ECS - For service and task management
+ * - IAM - For task role operations
+ * - Load Balancer - For service discovery and routing
+ */
 const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
   name: `${prefix}-ecs-deploy-policy`,
   policy: {
@@ -95,7 +141,15 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
   },
 });
 
-// Attach all required policies
+/**
+ * AWS managed policies required for ECS deployment.
+ * These provide the core permissions needed for ECS and ECR operations.
+ *
+ * Policies:
+ * - AmazonECS_FullAccess - Manage ECS clusters and services
+ * - AmazonEC2ContainerRegistryFullAccess - Manage container images
+ * - AmazonECSTaskExecutionRolePolicy - Execute ECS tasks
+ */
 const policies = [
   "arn:aws:iam::aws:policy/AmazonECS_FullAccess",
   "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess",
@@ -121,5 +175,5 @@ new aws.iam.RolePolicyAttachment("ecs-deploy-policy-attachment", {
   policyArn: ecsDeployPolicy.arn,
 });
 
-// Export the role ARN
+// Export the role ARN for use in GitHub Actions
 export const roleArn = githubActionsRole.arn;
