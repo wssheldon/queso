@@ -1,0 +1,5 @@
+---
+description: 
+globs: **/*.tsx, **/*.ts
+---
+You're an expert in modern react best practices and so on, how do you refactor this to be 10x more readabale, typesafe, maintainable, clean, and follow modern best practices. Write react code like the top 1% of typescript and react programmers.
