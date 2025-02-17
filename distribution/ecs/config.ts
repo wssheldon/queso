@@ -1,72 +1,44 @@
+/**
+ * ECS Configuration
+ *
+ * This module provides the configuration for the ECS deployment.
+ * It uses type-safe validation for the ECR repository name and
+ * provides default values for various ECS settings.
+ */
+
 import { Config } from "@pulumi/pulumi";
+import { validateEcrRepositoryName, EcrRepositoryName } from "./types";
 
 const config = new Config();
 
-// Type to ensure string length is within AWS ECR limits
-type MaxLength<T extends string, N extends number> = T extends {
-  length: infer L;
-}
-  ? L extends N
-    ? T
-    : L extends number
-    ? number extends L
-      ? string
-      : L extends N
-      ? T
-      : L extends Exclude<number, N>
-      ? never
-      : T
-    : string
-  : string;
-
-// Type for ECR repository name (max 255 chars)
-type EcrRepositoryName = MaxLength<string, 255>;
-
-// Utility type to ensure a string is not too long
-type ValidateStringLength<T extends string, N extends number> = T extends {
-  length: infer L;
-}
-  ? L extends number
-    ? L extends N
-      ? T
-      : number extends L
-      ? string
-      : L extends Exclude<number, N>
-      ? L extends number
-        ? L extends number & { readonly brand: unique symbol }
-          ? T
-          : L extends number
-          ? L extends number & { readonly tooLong: true }
-            ? never
-            : T
-          : never
-        : never
-      : T
-    : string
-  : string;
-
-// Validate ECR repository name at compile time
-const validateEcrRepositoryName = <T extends string>(
-  name: T
-): ValidateStringLength<T, 255> => {
-  if (name.length > 255) {
-    throw new Error("ECR repository name must be 255 characters or less");
-  }
-  return name as unknown as ValidateStringLength<T, 255>;
-};
-
+/**
+ * Configuration interface for the ECS application.
+ * Includes all necessary settings for deploying an ECS service.
+ */
 export interface AppConfig {
+  /** The deployment environment (e.g., "dev", "prod") */
   environment: string;
+  /** Prefix for resource naming */
   prefix: string;
+  /** AWS region for deployment */
   region: string;
+  /** CIDR block for the VPC */
   vpcCidr: string;
+  /** CIDR blocks for public subnets */
   publicSubnetCidrs: string[];
+  /** CIDR blocks for private subnets */
   privateSubnetCidrs: string[];
+  /** Container port for the application */
   containerPort: number;
+  /** Desired count of ECS tasks */
   desiredCount: number;
+  /** CPU units for the ECS task */
   cpu: number;
+  /** Memory (in MiB) for the ECS task */
   memory: number;
+  /** Health check path for the application */
   healthCheckPath: string;
+  /** Validated ECR repository name */
   ecrRepositoryName: EcrRepositoryName;
 }
 
