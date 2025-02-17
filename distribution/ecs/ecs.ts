@@ -18,7 +18,7 @@ export function createEcsCluster(
 
   // Create ECR Repository
   const repository = new aws.ecr.Repository(`${config.prefix}-repo`, {
-    name: `${config.prefix}-repo`,
+    name: config.ecrRepositoryName,
     imageScanningConfiguration: {
       scanOnPush: true,
     },
@@ -159,20 +159,19 @@ export function createEcsCluster(
       "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
   });
 
-  // Create Task Definition
+  // Create ECS Task Definition
   const taskDefinition = new aws.ecs.TaskDefinition(`${config.prefix}-task`, {
-    family: `${config.prefix}-task`,
+    family: config.prefix,
     cpu: config.cpu.toString(),
     memory: config.memory.toString(),
     networkMode: "awsvpc",
     requiresCompatibilities: ["FARGATE"],
     executionRoleArn: taskExecutionRole.arn,
-    containerDefinitions: JSON.stringify([
+    containerDefinitions: pulumi.jsonStringify([
       {
-        name: `${config.prefix}-container`,
+        name: config.prefix,
         image: repository.repositoryUrl,
-        cpu: config.cpu,
-        memory: config.memory,
+        essential: true,
         portMappings: [
           {
             containerPort: config.containerPort,
@@ -188,12 +187,6 @@ export function createEcsCluster(
             "awslogs-stream-prefix": "ecs",
           },
         },
-        environment: [
-          {
-            name: "NODE_ENV",
-            value: config.environment,
-          },
-        ],
       },
     ]),
   });
@@ -237,5 +230,6 @@ export function createEcsCluster(
     repository,
     alb,
     service,
+    taskDefinition,
   };
 }
