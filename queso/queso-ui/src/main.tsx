@@ -7,8 +7,10 @@ import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { initPostHog } from '@/config/posthog';
+import { initSentry } from '@/config/sentry';
 
-// Initialize PostHog
+// Initialize monitoring and analytics
+initSentry(); // Initialize Sentry first for better error tracking
 initPostHog();
 
 // Import the generated route tree
