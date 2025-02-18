@@ -4,11 +4,16 @@ import * as pulumi from "@pulumi/pulumi";
 export interface DnsConfig {
   domainName: string;
   environment: string;
-  alb: aws.lb.LoadBalancer;
   region: string;
 }
 
-export async function configureDns(config: DnsConfig) {
+export interface AlbDnsConfig {
+  domainName: string;
+  environment: string;
+  alb: aws.lb.LoadBalancer;
+}
+
+export async function createCertificate(config: DnsConfig) {
   // Get the hosted zone for the domain
   const hostedZone = await aws.route53.getZone({
     name: config.domainName,
@@ -49,6 +54,16 @@ export async function configureDns(config: DnsConfig) {
     }
   );
 
+  return {
+    certificate: certificateValidation.certificateArn,
+    hostedZone,
+  };
+}
+
+export async function createAlbDnsRecord(
+  config: AlbDnsConfig,
+  hostedZone: aws.route53.GetZoneResult
+) {
   // Create A record for the domain pointing to ALB
   const albAliasRecord = new aws.route53.Record(
     `${config.environment}-alb-alias`,
@@ -67,8 +82,6 @@ export async function configureDns(config: DnsConfig) {
   );
 
   return {
-    certificate: certificateValidation.certificateArn,
-    hostedZone,
     albAliasRecord,
   };
 }

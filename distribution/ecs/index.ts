@@ -4,7 +4,7 @@ import { createEcsCluster } from "./ecs";
 import { EcrRepository } from "./ecr";
 import { DockerBuilder } from "./docker";
 import { createRdsCluster } from "./rds";
-import { configureDns } from "./dns";
+import { createCertificate, createAlbDnsRecord } from "./dns";
 import { createSecrets } from "./secrets";
 import * as pulumi from "@pulumi/pulumi";
 
@@ -39,29 +39,18 @@ const secrets = createSecrets({
   environment: appConfig.environment,
 });
 
-// Create initial ECS Cluster to get ALB
-const initialDeploy = createEcsCluster({
-  config: appConfig,
-  vpc,
-  publicSubnets,
-  privateSubnets,
-  ecrRepository: ecrRepo,
-  dockerImage,
-  databaseUrl: database.connectionString,
-  databaseSecurityGroup: database.securityGroup,
-  secrets,
-  stage: "initial",
-});
+// Create certificate and get hosted zone
+const dnsSetup = pulumi
+  .all([
+    createCertificate({
+      domainName: appConfig.domainName,
+      environment: appConfig.environment,
+      region: appConfig.region,
+    }),
+  ])
+  .apply(([certResult]) => certResult);
 
-// Configure DNS and SSL certificate
-const dns = configureDns({
-  domainName: appConfig.domainName,
-  environment: appConfig.environment,
-  alb: initialDeploy.alb,
-  region: appConfig.region,
-});
-
-// Create final ECS Cluster with certificate
+// Create ECS Cluster with all components
 const { cluster, alb, service, httpListener, httpsListener } = createEcsCluster(
   {
     config: appConfig,
@@ -72,10 +61,21 @@ const { cluster, alb, service, httpListener, httpsListener } = createEcsCluster(
     dockerImage,
     databaseUrl: database.connectionString,
     databaseSecurityGroup: database.securityGroup,
-    certificateArn: pulumi.output(dns).certificate,
     secrets,
-    stage: "final",
+    certificateArn: dnsSetup.certificate,
   }
+);
+
+// Create DNS record for ALB after cluster is created
+const albDns = pulumi.all([alb, dnsSetup]).apply(([loadBalancer, certResult]) =>
+  createAlbDnsRecord(
+    {
+      domainName: appConfig.domainName,
+      environment: appConfig.environment,
+      alb: loadBalancer,
+    },
+    certResult.hostedZone
+  )
 );
 
 // Export important values
@@ -83,4 +83,4 @@ export const vpcId = vpc.id;
 export const repositoryUrl = ecrRepo.repository.repositoryUrl;
 export const loadBalancerDns = alb.dnsName;
 export const domainName = appConfig.domainName;
-export const certificateArn = pulumi.output(dns).certificate;
+export const certificateArn = dnsSetup.certificate;
