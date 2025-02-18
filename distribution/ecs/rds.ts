@@ -87,6 +87,37 @@ export function createRdsCluster(args: RdsClusterArgs) {
 
   // Create cluster instances
   const instanceCount = args.config.environment === "prod" ? 2 : 1;
+
+  // Create IAM role for RDS monitoring
+  const monitoringRole = new aws.iam.Role(
+    `${args.config.prefix}-rds-monitoring-role`,
+    {
+      name: `${args.config.prefix}-rds-monitoring-role`,
+      assumeRolePolicy: JSON.stringify({
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: {
+              Service: "monitoring.rds.amazonaws.com",
+            },
+            Action: "sts:AssumeRole",
+          },
+        ],
+      }),
+    }
+  );
+
+  // Attach the required policy for RDS monitoring
+  new aws.iam.RolePolicyAttachment(
+    `${args.config.prefix}-rds-monitoring-policy`,
+    {
+      role: monitoringRole.name,
+      policyArn:
+        "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole",
+    }
+  );
+
   const instances = Array.from({ length: instanceCount }).map((_, i) => {
     return new aws.rds.ClusterInstance(
       `${args.config.prefix}-aurora-instance-${i}`,
@@ -100,6 +131,7 @@ export function createRdsCluster(args: RdsClusterArgs) {
         performanceInsightsEnabled: true,
         performanceInsightsRetentionPeriod: 7,
         monitoringInterval: 60,
+        monitoringRoleArn: monitoringRole.arn,
         autoMinorVersionUpgrade: true,
         tags: {
           Name: `${args.config.prefix}-aurora-instance-${i}`,
