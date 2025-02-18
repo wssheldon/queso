@@ -243,6 +243,7 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
           "rds:CreateDBSubnetGroup",
           "rds:DeleteDBSubnetGroup",
           "rds:DescribeDBSubnetGroups",
+          "rds:DescribeGlobalClusters",
           "rds:ModifyDBSubnetGroup",
           "rds:CreateDBInstance",
           "rds:DeleteDBInstance",
