@@ -36,9 +36,9 @@ impl IntoResponse for UserError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Error processing password".to_string(),
             ),
-            UserError::DatabaseError(_) => (
+            UserError::DatabaseError(e) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Database error".to_string(),
+                format!("Database error: {}", e),
             ),
             UserError::OAuthError(msg) => (StatusCode::UNAUTHORIZED, msg),
             UserError::InternalError => (

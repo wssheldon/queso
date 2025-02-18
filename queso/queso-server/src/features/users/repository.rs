@@ -22,6 +22,10 @@ impl UserRepository {
             .values(new_user)
             .returning(User::as_returning())
             .get_result(&mut conn)
+            .map_err(|e| {
+                tracing::error!("Database error creating user: {}", e);
+                e
+            })
     }
 
     pub fn list(&self) -> Result<Vec<User>, diesel::result::Error> {

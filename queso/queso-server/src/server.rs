@@ -1,5 +1,5 @@
 use crate::{
-    config::database::establish_connection_pool,
+    config::database::{establish_connection_pool, run_migrations},
     features::{
         auth::{
             oauth::{OAuthConfig, OAuthState},
@@ -21,6 +21,10 @@ use utoipa_swagger_ui::SwaggerUi;
 pub async fn run_server() {
     // Create database pool
     let pool = establish_connection_pool();
+
+    // Run migrations
+    tracing::info!("Running database migrations...");
+    run_migrations(&pool);
 
     // Create repositories
     let user_repository = UserRepository::new(pool.clone());
