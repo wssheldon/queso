@@ -11,7 +11,10 @@ use crate::{
     openapi::ApiDoc,
 };
 use axum::{Router, routing::get};
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    services::{ServeDir, ServeFile},
+};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -42,6 +45,10 @@ pub async fn run_server() {
         .allow_headers(Any)
         .allow_origin(Any);
 
+    // Setup static file serving with SPA fallback
+    let static_files_service =
+        ServeDir::new("dist").not_found_service(ServeFile::new("dist/index.html"));
+
     // Build our application with routes
     let app = Router::new()
         .route("/health", get(health_check))
@@ -55,6 +62,7 @@ pub async fn run_server() {
             }),
         )
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .fallback_service(static_files_service)
         .layer(cors);
 
     // Get server host and port from environment

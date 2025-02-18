@@ -4,16 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bunx --bun vite",
     "scan": "bun run dev & bunx react-scan@latest localhost:5173",
-    "build": "NODE_ENV=production vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:debug": "playwright test --debug",
-    "test:codegen": "playwright codegen"
+    "build": "NODE_ENV=production bunx --bun vite build",
+    "preview": "bunx --bun vite preview",
+    "lint": "bunx --bun eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "format": "bunx --bun prettier --write \"src/**/*.{ts,tsx}\"",
+    "test": "bunx --bun playwright test",
+    "test:ui": "bunx --bun playwright test --ui",
+    "test:debug": "bunx --bun playwright test --debug",
+    "test:codegen": "bunx --bun playwright codegen"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.0",
