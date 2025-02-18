@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Github, Star, Zap, User, LogOut } from 'lucide-react';
@@ -14,6 +14,16 @@ import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/use-auth';
 
 export const Route = createFileRoute('/')({
+  beforeLoad: ({ context, location }) => {
+    if (!context.isAuthenticated) {
+      throw redirect({
+        to: '/login',
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  },
   component: HomeRoute,
 });
 

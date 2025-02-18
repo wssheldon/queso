@@ -17,7 +17,21 @@ initPostHog();
 import { routeTree } from './routeTree.gen';
 
 // Create a new router instance
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  context: {
+    isAuthenticated: !!localStorage.getItem('auth_token'),
+  },
+});
+
+// Create a helper to update auth state
+export const updateAuthState = () => {
+  router.update({
+    context: {
+      isAuthenticated: !!localStorage.getItem('auth_token'),
+    },
+  });
+};
 
 // Create a client
 const queryClient = new QueryClient({

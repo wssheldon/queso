@@ -8,6 +8,7 @@ import {
   type GoogleCodeExchangeRequest,
 } from './client';
 import { AxiosError } from 'axios';
+import { updateAuthState } from '@/main';
 
 // Query keys
 export const authKeys = {
@@ -25,6 +26,9 @@ export const useLogin = () => {
   return useMutation<AuthResponse, AxiosError, LoginRequest>({
     mutationKey: authKeys.login(),
     mutationFn: auth.login,
+    onSuccess: () => {
+      updateAuthState();
+    },
   });
 };
 
@@ -49,6 +53,9 @@ export const useLogout = () => {
   return useMutation<void, AxiosError, void>({
     mutationKey: authKeys.logout(),
     mutationFn: auth.logout,
+    onSuccess: () => {
+      updateAuthState();
+    },
   });
 };
 
@@ -63,6 +70,8 @@ export const useExchangeGoogleCode = () => {
   return useMutation<AuthResponse, AxiosError, GoogleCodeExchangeRequest>({
     mutationKey: authKeys.exchangeGoogleCode(),
     mutationFn: auth.exchangeGoogleCode,
-    retry: false,
+    onSuccess: () => {
+      updateAuthState();
+    },
   });
 };
