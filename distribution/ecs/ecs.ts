@@ -88,14 +88,17 @@ export function createEcsCluster(args: EcsClusterArgs) {
   });
 
   // Allow ECS tasks to connect to RDS
-  new aws.ec2.SecurityGroupRule(`${args.config.prefix}-ecs-to-rds`, {
-    type: "ingress",
-    fromPort: 5432,
-    toPort: 5432,
-    protocol: "tcp",
-    sourceSecurityGroupId: ecsSg.id,
-    securityGroupId: args.databaseSecurityGroup.id,
-  });
+  const rdsSecurityRule = new aws.ec2.SecurityGroupRule(
+    `${args.config.prefix}-ecs-to-rds`,
+    {
+      type: "ingress",
+      fromPort: 5432,
+      toPort: 5432,
+      protocol: "tcp",
+      sourceSecurityGroupId: ecsSg.id,
+      securityGroupId: args.databaseSecurityGroup.id,
+    }
+  );
 
   // Create ALB
   const alb = new aws.lb.LoadBalancer(`${args.config.prefix}-alb`, {
@@ -330,19 +333,7 @@ export function createEcsCluster(args: EcsClusterArgs) {
       },
     },
     {
-      dependsOn: [
-        taskDefinition,
-        args.databaseSecurityGroup,
-        // Add explicit dependency on the security group rule to ensure RDS is ready
-        new aws.ec2.SecurityGroupRule(`${args.config.prefix}-ecs-to-rds`, {
-          type: "ingress",
-          fromPort: 5432,
-          toPort: 5432,
-          protocol: "tcp",
-          sourceSecurityGroupId: ecsSg.id,
-          securityGroupId: args.databaseSecurityGroup.id,
-        }),
-      ],
+      dependsOn: [taskDefinition, args.databaseSecurityGroup, rdsSecurityRule],
     }
   );
 
