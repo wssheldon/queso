@@ -96,7 +96,7 @@ COPY .git ./.git
 COPY queso/queso-server/migrations ./queso-server/migrations
 COPY --from=rust-builder /usr/src/app/queso/target/release/${APP_NAME} /usr/local/bin/
 # Copy frontend build
-COPY --from=frontend-builder /app/queso-ui/dist ./queso-ui/dist
+COPY --from=frontend-builder /app/queso-ui/dist ./dist
 
 RUN chown -R queso:queso /app
 

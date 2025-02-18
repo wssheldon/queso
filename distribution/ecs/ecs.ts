@@ -117,13 +117,14 @@ export function createEcsCluster(args: EcsClusterArgs) {
     vpcId: args.vpc.id,
     healthCheck: {
       enabled: true,
-      path: args.config.healthCheckPath,
+      path: "/health",
       port: args.config.containerPort.toString(),
       protocol: "HTTP",
       healthyThreshold: 3,
       unhealthyThreshold: 3,
       timeout: 5,
       interval: 30,
+      matcher: "200",
     },
     tags: {
       Name: `${args.config.prefix}-tg`,
@@ -184,6 +185,7 @@ export function createEcsCluster(args: EcsClusterArgs) {
           name: args.config.prefix,
           image: args.dockerImage.imageUri,
           essential: true,
+          workingDirectory: "/app/queso",
           portMappings: [
             {
               containerPort: args.config.containerPort,
@@ -303,28 +305,46 @@ export function createEcsCluster(args: EcsClusterArgs) {
   );
 
   // Create ECS Service
-  const service = new aws.ecs.Service(`${args.config.prefix}-service`, {
-    cluster: cluster.arn,
-    desiredCount: args.config.desiredCount,
-    launchType: "FARGATE",
-    taskDefinition: taskDefinition.arn,
-    networkConfiguration: {
-      subnets: args.privateSubnets.map((subnet) => subnet.id),
-      securityGroups: [ecsSg.id],
-      assignPublicIp: false,
-    },
-    loadBalancers: [
-      {
-        targetGroupArn: targetGroup.arn,
-        containerName: args.config.prefix,
-        containerPort: args.config.containerPort,
+  const service = new aws.ecs.Service(
+    `${args.config.prefix}-service`,
+    {
+      cluster: cluster.arn,
+      desiredCount: args.config.desiredCount,
+      launchType: "FARGATE",
+      taskDefinition: taskDefinition.arn,
+      networkConfiguration: {
+        subnets: args.privateSubnets.map((subnet) => subnet.id),
+        securityGroups: [ecsSg.id],
+        assignPublicIp: false,
       },
-    ],
-    tags: {
-      Name: `${args.config.prefix}-service`,
-      Environment: args.config.environment,
+      loadBalancers: [
+        {
+          targetGroupArn: targetGroup.arn,
+          containerName: args.config.prefix,
+          containerPort: args.config.containerPort,
+        },
+      ],
+      tags: {
+        Name: `${args.config.prefix}-service`,
+        Environment: args.config.environment,
+      },
     },
-  });
+    {
+      dependsOn: [
+        taskDefinition,
+        args.databaseSecurityGroup,
+        // Add explicit dependency on the security group rule to ensure RDS is ready
+        new aws.ec2.SecurityGroupRule(`${args.config.prefix}-ecs-to-rds`, {
+          type: "ingress",
+          fromPort: 5432,
+          toPort: 5432,
+          protocol: "tcp",
+          sourceSecurityGroupId: ecsSg.id,
+          securityGroupId: args.databaseSecurityGroup.id,
+        }),
+      ],
+    }
+  );
 
   return {
     cluster,
