@@ -229,6 +229,7 @@ const ecsDeployPolicy = new aws.iam.Policy("ecs-deploy-policy", {
           "ec2:DescribeAvailabilityZones",
           "ec2:DescribeVpcAttribute",
           // Secrets Manager permissions
+          "secretsmanager:CreateSecret",
           "secretsmanager:DescribeSecret",
           "secretsmanager:ListSecrets",
           "secretsmanager:PutSecretValue",
