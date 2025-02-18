@@ -6,8 +6,9 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateUserRequest {
     pub username: String,
     pub email: String,
@@ -97,7 +98,7 @@ pub async fn get_users(State(service): State<UserService>) -> Result<Json<Vec<Us
 #[utoipa::path(
     post,
     path = "/api/users",
-    request_body = NewUser,
+    request_body = CreateUserRequest,
     responses(
         (status = 201, description = "User created successfully", body = User),
         (status = 400, description = "Invalid user data"),
@@ -107,11 +108,17 @@ pub async fn get_users(State(service): State<UserService>) -> Result<Json<Vec<Us
 )]
 pub async fn create_user(
     State(service): State<UserService>,
-    Json(new_user): Json<NewUser>,
-) -> Result<(StatusCode, Json<User>), StatusCode> {
+    Json(new_user_request): Json<CreateUserRequest>,
+) -> Result<(StatusCode, Json<User>), UserError> {
+    let new_user = NewUser::from_request(
+        new_user_request.username,
+        new_user_request.email,
+        new_user_request.password,
+    )?;
+
     match service.create_user(new_user).await {
         Ok(user) => Ok((StatusCode::CREATED, Json(user))),
-        Err(_) => Err(StatusCode::BAD_REQUEST),
+        Err(err) => Err(err),
     }
 }
 
