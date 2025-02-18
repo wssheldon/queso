@@ -81,7 +81,7 @@ export function createVpc(config: AppConfig) {
 
   // Create NAT Gateway for private subnets
   const eip = new aws.ec2.Eip(`${config.prefix}-eip`, {
-    vpc: true,
+    domain: "vpc",
     tags: {
       Name: `${config.prefix}-eip`,
       Environment: config.environment,

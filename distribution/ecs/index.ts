@@ -50,6 +50,7 @@ const initialDeploy = createEcsCluster({
   databaseUrl: database.connectionString,
   databaseSecurityGroup: database.securityGroup,
   secrets,
+  stage: "initial",
 });
 
 // Configure DNS and SSL certificate
@@ -73,6 +74,7 @@ const { cluster, alb, service, httpListener, httpsListener } = createEcsCluster(
     databaseSecurityGroup: database.securityGroup,
     certificateArn: pulumi.output(dns).certificate,
     secrets,
+    stage: "final",
   }
 );
 

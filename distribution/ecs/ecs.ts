@@ -16,9 +16,11 @@ export interface EcsClusterArgs {
   databaseSecurityGroup: aws.ec2.SecurityGroup;
   certificateArn?: pulumi.Input<string>;
   secrets: SecretsManagerResult;
+  stage?: string;
 }
 
 export function createEcsCluster(args: EcsClusterArgs) {
+  const deploymentStage = args.stage || "final";
   // Create ECS Cluster
   const cluster = new aws.ecs.Cluster(`${args.config.prefix}-cluster`, {
     tags: {
@@ -276,7 +278,7 @@ export function createEcsCluster(args: EcsClusterArgs) {
           logConfiguration: {
             logDriver: "awslogs",
             options: {
-              "awslogs-group": `/ecs/${args.config.prefix}`,
+              "awslogs-group": `/ecs/${args.config.prefix}/${deploymentStage}`,
               "awslogs-region": args.config.region,
               "awslogs-stream-prefix": "ecs",
             },
@@ -286,15 +288,19 @@ export function createEcsCluster(args: EcsClusterArgs) {
     }
   );
 
-  // Create CloudWatch Log Group
-  const logGroup = new aws.cloudwatch.LogGroup(`${args.config.prefix}-logs`, {
-    name: `/ecs/${args.config.prefix}`,
-    retentionInDays: 30,
-    tags: {
-      Name: `${args.config.prefix}-logs`,
-      Environment: args.config.environment,
-    },
-  });
+  // Create CloudWatch Log Group with unique name
+  const logGroup = new aws.cloudwatch.LogGroup(
+    `${args.config.prefix}-logs-${deploymentStage}`,
+    {
+      name: `/ecs/${args.config.prefix}/${deploymentStage}`,
+      retentionInDays: 30,
+      tags: {
+        Name: `${args.config.prefix}-logs`,
+        Environment: args.config.environment,
+        Stage: deploymentStage,
+      },
+    }
+  );
 
   // Create ECS Service
   const service = new aws.ecs.Service(`${args.config.prefix}-service`, {
