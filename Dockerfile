@@ -4,6 +4,7 @@
 # Arguments that can be overridden
 ARG RUST_VERSION=nightly-slim
 ARG DEBIAN_VERSION=bookworm-slim
+ARG BUN_VERSION=1.2.2
 ARG APP_NAME=queso-server
 ARG CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
@@ -39,8 +40,20 @@ RUN mkdir -p queso/queso-server/src queso/queso-cli/src && \
 # Build dependencies
 RUN cd queso && cargo build --release --bin "${APP_NAME}"
 
-# Final builder stage
-FROM builder-base as builder
+# Frontend builder stage
+FROM oven/bun:${BUN_VERSION} as frontend-builder
+WORKDIR /app/queso-ui
+
+# Copy frontend source first to ensure all config files are available
+COPY queso/queso-ui/ ./
+
+# Install dependencies and required Vite plugins
+RUN bun install && \
+    bun add -d @vitejs/plugin-react @tailwindcss/vite @tanstack/router-plugin @sentry/vite-plugin && \
+    NODE_ENV=production bunx vite build
+
+# Final builder stage for Rust
+FROM builder-base as rust-builder
 ARG APP_NAME
 WORKDIR /usr/src/app
 
@@ -81,9 +94,10 @@ WORKDIR /app/queso
 # Copy the entire repository structure
 COPY .git ./.git
 COPY queso/queso-server/migrations ./queso-server/migrations
-COPY --from=builder /usr/src/app/queso/target/release/${APP_NAME} /usr/local/bin/
+COPY --from=rust-builder /usr/src/app/queso/target/release/${APP_NAME} /usr/local/bin/
+# Copy frontend build
+COPY --from=frontend-builder /app/queso-ui/dist ./queso-ui/dist
 
-# Set permissions for the queso user
 RUN chown -R queso:queso /app
 
 # Set environment variables
@@ -91,8 +105,7 @@ ENV SERVER_HOST=0.0.0.0 \
     API_PORT=3000 \
     RUST_LOG=info \
     TZ=UTC \
-    RUST_BACKTRACE=1 \
-    DATABASE_URL=postgres://postgres:postgres@localhost:5432/queso
+    RUST_BACKTRACE=1 
 
 # Set up health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

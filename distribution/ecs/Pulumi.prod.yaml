@@ -3,10 +3,14 @@ config:
   aws:region: us-east-1
   queso:dbPassword:
     secure: v1:fj1EooxbaCULwbst:2aNWbRumRne5PwVr7mveKotjHjNLAKHGERVEiIxFcKh+YrU=
-  queso:domainName: queso.com
+  queso:domainName: tryresolve.io
   queso:googleClientId:
     secure: v1:ACpjn/0+xba+6uEo:8j0a278xn6ZJRBnmN03LtnW7koXcHdvL3k3gqwGdrXyby3DRt0gAlZLUGa7NTF7TIXBMNwKZIUsNW0py3mOBdlvm1ho8ZW+XoaX4lxnt3Nsbpq0xcDAXng==
   queso:googleClientSecret:
     secure: v1:OcM7vhLLnav+JRGu:9UMx+TpYo7WIGFm1dPmPgjX6nphJGi2gXa662LSCl1Iv2gfFuXE8ZHZfMO2n8LdiPpit
   queso:jwtSecret:
     secure: v1:A7CmKp8fCjI4O3G2:dNCpLOMSrERoz8U7aKWAZnFxpecUiWHoewB68u6NivrUZHdSqW9hrCPU3C5GJa9EKIehOo0gOYMxXg==
+  queso:posthogApiKey:
+    secure: v1:xTVoDWesy/bUDF8R:8sBXa5ESbSFE5qLeUHm5PKjoBThDUNng/tc/tDozUUIjfM7OgOX75YhehcdpKzAxIFdBhtfMSzeefHBDBYH/
+  queso:sentryDsn:
+    secure: v1:2/1zQijqjwJAJ5iG:eCQ8Zd0FmsKmjDAluubz7Q8DY6k17TPR1QWfTlOQ0SNEpfPpe3cXWU/a8caVnZUhII045FPB6lejMWnqtEQwToFZoldmsGZPAdR7uwYyrJBNXKrdiM9UpZYHNs2N7OiY/BzNC9xf7YUMc49NW8X6

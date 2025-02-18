@@ -53,6 +53,10 @@ export interface AppConfig {
   googleClientSecret: Output<string>;
   /** Domain name for the application */
   domainName: string;
+  /** Sentry DSN for error tracking */
+  sentryDsn: Output<string>;
+  /** PostHog API key for analytics */
+  posthogApiKey: Output<string>;
 }
 
 export const appConfig: AppConfig = {
@@ -80,4 +84,6 @@ export const appConfig: AppConfig = {
   googleClientId: config.requireSecret("googleClientId"),
   googleClientSecret: config.requireSecret("googleClientSecret"),
   domainName: config.require("domainName"),
+  sentryDsn: config.requireSecret("sentryDsn"),
+  posthogApiKey: config.requireSecret("posthogApiKey"),
 };

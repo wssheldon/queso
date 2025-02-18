@@ -3,6 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import { AppConfig } from "./config";
 import { EcrRepository } from "./ecr";
 import { DockerBuilder } from "./docker";
+import { SecretsManagerResult } from "./secrets";
 
 export interface EcsClusterArgs {
   config: AppConfig;
@@ -13,31 +14,11 @@ export interface EcsClusterArgs {
   dockerImage: DockerBuilder;
   databaseUrl: pulumi.Output<string>;
   databaseSecurityGroup: aws.ec2.SecurityGroup;
+  certificateArn?: pulumi.Input<string>;
+  secrets: SecretsManagerResult;
 }
 
 export function createEcsCluster(args: EcsClusterArgs) {
-  // Create Secrets Manager secret for sensitive environment variables
-  const appSecrets = new aws.secretsmanager.Secret(
-    `${args.config.prefix}-app-secrets`,
-    {
-      name: `${args.config.prefix}-${args.config.environment}-app-secrets`,
-      description: "Application secrets for the Queso application",
-    }
-  );
-
-  // Store sensitive values in Secrets Manager
-  const secretValues = new aws.secretsmanager.SecretVersion(
-    `${args.config.prefix}-app-secrets-version`,
-    {
-      secretId: appSecrets.id,
-      secretString: pulumi.jsonStringify({
-        JWT_SECRET: args.config.jwtSecret,
-        GOOGLE_CLIENT_ID: args.config.googleClientId,
-        GOOGLE_CLIENT_SECRET: args.config.googleClientSecret,
-      }),
-    }
-  );
-
   // Create ECS Cluster
   const cluster = new aws.ecs.Cluster(`${args.config.prefix}-cluster`, {
     tags: {
@@ -148,62 +129,43 @@ export function createEcsCluster(args: EcsClusterArgs) {
     },
   });
 
-  // Create ALB Listener
-  const listener = new aws.lb.Listener(`${args.config.prefix}-listener`, {
-    loadBalancerArn: alb.arn,
-    port: 80,
-    protocol: "HTTP",
-    defaultActions: [
-      {
-        type: "forward",
-        targetGroupArn: targetGroup.arn,
-      },
-    ],
-  });
-
-  // Create ECS Task Execution Role with permissions to read secrets
-  const taskExecutionRole = new aws.iam.Role(
-    `${args.config.prefix}-task-execution-role`,
+  // Create HTTPS Listener
+  const httpsListener = new aws.lb.Listener(
+    `${args.config.prefix}-https-listener`,
     {
-      assumeRolePolicy: JSON.stringify({
-        Version: "2012-10-17",
-        Statement: [
-          {
-            Action: "sts:AssumeRole",
-            Effect: "Allow",
-            Principal: {
-              Service: "ecs-tasks.amazonaws.com",
-            },
-          },
-        ],
-      }),
-    }
-  );
-
-  // Attach required policies to Task Execution Role
-  new aws.iam.RolePolicyAttachment(
-    `${args.config.prefix}-task-execution-policy`,
-    {
-      role: taskExecutionRole.name,
-      policyArn:
-        "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
-    }
-  );
-
-  // Add policy for reading secrets
-  new aws.iam.RolePolicy(`${args.config.prefix}-secrets-policy`, {
-    role: taskExecutionRole.name,
-    policy: pulumi.jsonStringify({
-      Version: "2012-10-17",
-      Statement: [
+      loadBalancerArn: alb.arn,
+      port: 443,
+      protocol: "HTTPS",
+      sslPolicy: "ELBSecurityPolicy-TLS13-1-2-2021-06",
+      certificateArn: args.certificateArn,
+      defaultActions: [
         {
-          Effect: "Allow",
-          Action: ["secretsmanager:GetSecretValue", "kms:Decrypt"],
-          Resource: [appSecrets.arn],
+          type: "forward",
+          targetGroupArn: targetGroup.arn,
         },
       ],
-    }),
-  });
+    }
+  );
+
+  // Modify HTTP Listener to redirect to HTTPS
+  const httpListener = new aws.lb.Listener(
+    `${args.config.prefix}-http-listener`,
+    {
+      loadBalancerArn: alb.arn,
+      port: 80,
+      protocol: "HTTP",
+      defaultActions: [
+        {
+          type: "redirect",
+          redirect: {
+            port: "443",
+            protocol: "HTTPS",
+            statusCode: "HTTP_301",
+          },
+        },
+      ],
+    }
+  );
 
   // Create ECS Task Definition with environment variables and secrets
   const taskDefinition = new aws.ecs.TaskDefinition(
@@ -214,7 +176,7 @@ export function createEcsCluster(args: EcsClusterArgs) {
       memory: args.config.memory.toString(),
       networkMode: "awsvpc",
       requiresCompatibilities: ["FARGATE"],
-      executionRoleArn: taskExecutionRole.arn,
+      executionRoleArn: args.secrets.executionRole.arn,
       containerDefinitions: pulumi.jsonStringify([
         {
           name: args.config.prefix,
@@ -260,19 +222,55 @@ export function createEcsCluster(args: EcsClusterArgs) {
               name: "NODE_ENV",
               value: args.config.environment,
             },
+            {
+              name: "VITE_API_BASE_URL",
+              value: pulumi.interpolate`https://${args.config.domainName}`,
+            },
+            {
+              name: "VITE_ENABLE_ANALYTICS",
+              value: args.config.environment === "prod" ? "true" : "false",
+            },
+            {
+              name: "VITE_ENABLE_SENTRY",
+              value: args.config.environment === "prod" ? "true" : "false",
+            },
+            {
+              name: "VITE_SENTRY_ENVIRONMENT",
+              value: args.config.environment,
+            },
+            {
+              name: "VITE_SENTRY_TRACES_SAMPLE_RATE",
+              value: args.config.environment === "prod" ? "0.1" : "1.0",
+            },
+            {
+              name: "VITE_SENTRY_REPLAYS_SAMPLE_RATE",
+              value: args.config.environment === "prod" ? "0.1" : "1.0",
+            },
+            {
+              name: "VITE_SENTRY_ERROR_REPLAYS_SAMPLE_RATE",
+              value: args.config.environment === "prod" ? "1.0" : "1.0",
+            },
           ],
           secrets: [
             {
               name: "JWT_SECRET",
-              valueFrom: pulumi.interpolate`${appSecrets.arn}:JWT_SECRET::`,
+              valueFrom: pulumi.interpolate`${args.secrets.secret.arn}:JWT_SECRET::`,
             },
             {
               name: "GOOGLE_CLIENT_ID",
-              valueFrom: pulumi.interpolate`${appSecrets.arn}:GOOGLE_CLIENT_ID::`,
+              valueFrom: pulumi.interpolate`${args.secrets.secret.arn}:GOOGLE_CLIENT_ID::`,
             },
             {
               name: "GOOGLE_CLIENT_SECRET",
-              valueFrom: pulumi.interpolate`${appSecrets.arn}:GOOGLE_CLIENT_SECRET::`,
+              valueFrom: pulumi.interpolate`${args.secrets.secret.arn}:GOOGLE_CLIENT_SECRET::`,
+            },
+            {
+              name: "VITE_SENTRY_DSN",
+              valueFrom: pulumi.interpolate`${args.secrets.secret.arn}:SENTRY_DSN::`,
+            },
+            {
+              name: "VITE_POSTHOG_API_KEY",
+              valueFrom: pulumi.interpolate`${args.secrets.secret.arn}:POSTHOG_API_KEY::`,
             },
           ],
           logConfiguration: {
@@ -327,6 +325,7 @@ export function createEcsCluster(args: EcsClusterArgs) {
     alb,
     service,
     taskDefinition,
-    appSecrets,
+    httpListener,
+    httpsListener,
   };
 }
